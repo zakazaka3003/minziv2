@@ -25,17 +25,27 @@ const ITEMS = [
 
 export function Features() {
   return (
-    <section id="features" className="py-12 sm:py-16">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {ITEMS.map(({ icon: Icon, title, body }) => (
-          <div key={title} className="card p-6 flex flex-col gap-2.5">
-            <div className="h-10 w-10 rounded-full bg-[var(--green-soft)] text-[var(--green-deep)] flex items-center justify-center">
-              <Icon size={18} />
+    <section id="features" className="py-14 sm:py-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {ITEMS.map(({ icon: Icon, title, body }, i) => (
+            <div
+              key={title}
+              className="glass rounded-2xl p-6 flex flex-col gap-3 hover-lift"
+              style={{ animationDelay: `${i * 80}ms` }}
+            >
+              <div className="h-11 w-11 rounded-xl bg-[var(--green-soft)] text-[var(--green-deep)] flex items-center justify-center">
+                <Icon size={20} strokeWidth={1.8} />
+              </div>
+              <h3 className="font-display font-medium text-lg tracking-tight">
+                {title}
+              </h3>
+              <p className="text-sm text-[var(--foreground-muted)] leading-relaxed">
+                {body}
+              </p>
             </div>
-            <h3 className="font-display font-medium text-lg">{title}</h3>
-            <p className="text-sm text-[var(--foreground-muted)]">{body}</p>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );

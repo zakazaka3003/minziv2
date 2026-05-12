@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Volume2, Pause, Pencil, ArrowRight } from "lucide-react";
+import { Volume2, Pause, ArrowRight } from "lucide-react";
 
 const STEPS = [
   {
@@ -27,36 +27,43 @@ const STEPS = [
 
 export function HowItWorks() {
   return (
-    <section id="how" className="py-12 sm:py-20">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-10 items-center">
+    <section id="how" className="py-16 sm:py-24">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-12 items-center">
         <div>
-          <div className="text-xs uppercase tracking-[0.25em] text-[var(--green-deep)] mb-3 font-medium">
+          <div className="text-xs uppercase tracking-[0.3em] text-[var(--green-deep)] mb-4 font-medium">
             Как проходит обучение
           </div>
-          <h2 className="text-3xl sm:text-4xl font-display font-medium tracking-tight">
-            От первой черты <br /> до уверенного письма
+          <h2 className="text-3xl md:text-5xl font-display font-medium tracking-tighter leading-none">
+            От первой черты
+            <br />
+            до уверенного письма
           </h2>
-          <ol className="mt-7 space-y-4">
+          <ol className="mt-8 space-y-5">
             {STEPS.map(({ n, title, body }) => (
-              <li key={n} className="flex gap-3.5">
-                <div className="h-7 w-7 shrink-0 rounded-full bg-[var(--green)] text-white flex items-center justify-center text-xs font-semibold">
+              <li key={n} className="flex gap-4 items-start">
+                <div className="h-8 w-8 shrink-0 rounded-full bg-[var(--green)] text-white flex items-center justify-center text-sm font-semibold">
                   {n}
                 </div>
                 <div>
-                  <div className="font-medium">{title}</div>
-                  <div className="text-sm text-[var(--foreground-muted)] mt-0.5">{body}</div>
+                  <div className="font-medium tracking-tight">{title}</div>
+                  <div className="text-sm text-[var(--foreground-muted)] mt-1 leading-relaxed">
+                    {body}
+                  </div>
                 </div>
               </li>
             ))}
           </ol>
-          <div className="mt-7">
-            <Link href="/learn" className="btn btn-secondary">
-              Попробовать демо-урок <ArrowRight size={14} />
+          <div className="mt-8">
+            <Link href="/learn" className="btn btn-secondary group">
+              Попробовать демо-урок
+              <ArrowRight
+                size={14}
+                className="transition-transform group-hover:translate-x-1"
+              />
             </Link>
           </div>
         </div>
 
-        {/* Mock screen triptych */}
         <div className="relative grid grid-cols-3 gap-3">
           <MockCard title="Значение">
             <div className="hanzi text-6xl text-center">你</div>
@@ -78,7 +85,9 @@ export function HowItWorks() {
                 <span style={{ color: "#c43a3a" }}>你</span>
               </div>
             </div>
-            <div className="text-center mt-3 text-xs text-[var(--foreground-muted)]">2 / 6</div>
+            <div className="text-center mt-3 text-xs text-[var(--foreground-muted)]">
+              2 / 6
+            </div>
             <div className="flex items-center justify-center gap-2 mt-3">
               <button className="btn btn-ghost h-9 w-9 p-0">
                 <ArrowRight size={14} className="rotate-180" />
@@ -109,7 +118,6 @@ export function HowItWorks() {
               Далее <ArrowRight size={12} />
             </button>
           </MockCard>
-          {/* Brush asset */}
           <Image
             src="/bamboo/bamboo_3.png"
             alt=""
@@ -134,7 +142,7 @@ function MockCard({
 }) {
   return (
     <div
-      className={`card-soft p-3 flex flex-col gap-1 ${hi ? "shadow-md scale-[1.04] z-[1] bg-[var(--surface)]" : ""}`}
+      className={`glass rounded-xl p-3 flex flex-col gap-1 hover-lift ${hi ? "shadow-lg scale-[1.04] z-[1]" : ""}`}
     >
       <div className="flex items-center justify-between text-[11px] text-[var(--foreground-muted)]">
         <span className="flex items-center gap-1">
@@ -168,6 +176,3 @@ function Example({
     </div>
   );
 }
-
-// Unused import safe-guard for the Pencil icon
-void Pencil;
