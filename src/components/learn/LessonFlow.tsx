@@ -40,6 +40,7 @@ export function LessonFlow({ lesson, characters, pool, onExit }: Props) {
   // Per-step selected grapheme index → drives the static stroke highlight on
   // the intro card. Reset whenever we leave the intro step / switch chars.
   const [selectedGrapheme, setSelectedGrapheme] = useState<number | null>(null);
+  const [exerciseDone, setExerciseDone] = useState(false);
 
   const step: Step = useMemo(() => {
     if (stepIdx < totalCharSteps) {
@@ -58,6 +59,7 @@ export function LessonFlow({ lesson, characters, pool, onExit }: Props) {
 
   const next = () => {
     setSelectedGrapheme(null);
+    setExerciseDone(false);
     setStepIdx((i) => Math.min(totalSteps - 1, i + 1));
   };
 
@@ -79,12 +81,18 @@ export function LessonFlow({ lesson, characters, pool, onExit }: Props) {
     <div className="w-full max-w-3xl mx-auto py-6 px-4 sm:px-6">
       {/* Top bar */}
       <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={onExit}
-          className="text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
-        >
-          ← Выход
-        </button>
+        {(step.kind === "intro" || step.kind === "stroke" || step.kind === "grammar" || step.kind === "summary") ? (
+          <button
+            onClick={onExit}
+            className="text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
+          >
+            ← Выход
+          </button>
+        ) : (
+          <div className="text-sm text-[var(--foreground-muted)] opacity-40 cursor-not-allowed select-none">
+            ← Выход
+          </div>
+        )}
         <div className="flex-1 mx-4">
           <ProgressBar value={stepIdx + 1} max={totalSteps} />
         </div>
@@ -175,7 +183,7 @@ export function LessonFlow({ lesson, characters, pool, onExit }: Props) {
         <Card className="p-8 sm:p-10 flex flex-col items-center gap-5 float-up">
           <div className="text-center">
             <div className="text-xs uppercase tracking-[0.2em] text-[var(--foreground-soft)]">
-              Пишите сами
+              Напишите по памяти
             </div>
             <div className="mt-2 pinyin text-[var(--foreground-muted)]">
               {characters[step.charIdx].pinyin} ·{" "}
@@ -186,16 +194,20 @@ export function LessonFlow({ lesson, characters, pool, onExit }: Props) {
             key={`quiz-${characters[step.charIdx].hanzi}`}
             hanzi={characters[step.charIdx].hanzi}
             size={300}
+            showOutline={false}
             onComplete={({ totalMistakes }) => {
               recordOutcome(
                 characters[step.charIdx].hanzi,
                 totalMistakes === 0 ? "easy" : totalMistakes <= 2 ? "good" : "hard"
               );
+              setExerciseDone(true);
             }}
           />
-          <Button onClick={next} size="lg">
-            Дальше <ArrowRight size={16} />
-          </Button>
+          {exerciseDone && (
+            <Button onClick={next} size="lg">
+              Дальше <ArrowRight size={16} />
+            </Button>
+          )}
         </Card>
       )}
 

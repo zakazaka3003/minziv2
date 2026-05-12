@@ -8,6 +8,7 @@ interface Props {
   hanzi: string;
   size?: number;
   className?: string;
+  showOutline?: boolean;
   onMistake?: () => void;
   onCorrectStroke?: (i: number, total: number) => void;
   onComplete?: (info: { totalMistakes: number; totalStrokes: number }) => void;
@@ -31,6 +32,7 @@ export function WritingQuiz({
   hanzi,
   size = 300,
   className,
+  showOutline = true,
   onMistake,
   onCorrectStroke,
   onComplete,
@@ -41,7 +43,7 @@ export function WritingQuiz({
   const [totalStrokes, setTotalStrokes] = useState(0);
   const [feedback, setFeedback] = useState<
     null | { tone: "ok" | "warn" | "info"; text: string }
-  >({ tone: "info", text: "Пишите по образцу — система проверит порядок и направление черт." });
+  >({ tone: "info", text: showOutline ? "Пишите по образцу — система проверит порядок и направление черт." : "Напишите иероглиф по памяти. Система проверит порядок и направление черт." });
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +60,7 @@ export function WritingQuiz({
           height: size,
           padding: 8,
           showCharacter: false,
-          showOutline: true,
+          showOutline,
           strokeColor: "#2a2c28",
           outlineColor: "#e6e3da",
           drawingColor: "#c43a3a",
@@ -125,7 +127,7 @@ export function WritingQuiz({
       cancelled = true;
       writerRef.current?.cancelQuiz?.();
     };
-  }, [hanzi, size, onComplete, onCorrectStroke, onMistake]);
+  }, [hanzi, size, showOutline, onComplete, onCorrectStroke, onMistake]);
 
   const restart = () => {
     // Recreate by toggling state through the effect: simplest = remount
