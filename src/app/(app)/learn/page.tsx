@@ -7,7 +7,7 @@ import { useProgress } from "@/store/progress";
 import { useMounted } from "@/lib/useMounted";
 import { Panda } from "@/components/ui/Panda";
 import { ProgressBar } from "@/components/ui/Progress";
-import { ArrowRight, Lock, Check, ChevronRight, BookOpen } from "lucide-react";
+import { Lock, Check, ChevronRight, BookOpen, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const LEVELS = [1, 2, 3, 4, 5, 6, 7] as const;
@@ -115,31 +115,25 @@ export default function LearnPage() {
         })}
       </div>
 
-      {/* Lesson timeline */}
+      {/* Lesson list */}
       {level === 1 ? (
-        <ol className="relative" role="list">
-          {/* Vertical connector line */}
-          <span
-            aria-hidden
-            className="absolute left-[19px] top-6 bottom-6 w-px bg-[var(--border)]"
-          />
+        <div className="divide-y divide-[var(--border)]" role="list">
           {HSK1_LESSONS.map((lesson, i) => {
             const isDone = mounted && completed.includes(lesson.id);
             const isCurrent =
               mounted && !isDone && i === completedCount;
             const isLocked = !isDone && !isCurrent;
             return (
-              <li key={lesson.id} className="relative">
-                <LessonRow
-                  lesson={lesson}
-                  isDone={isDone}
-                  isCurrent={isCurrent}
-                  isLocked={isLocked}
-                />
-              </li>
+              <LessonRow
+                key={lesson.id}
+                lesson={lesson}
+                isDone={isDone}
+                isCurrent={isCurrent}
+                isLocked={isLocked}
+              />
             );
           })}
-        </ol>
+        </div>
       ) : (
         <div className="card p-8 text-center text-[var(--foreground-muted)]">
           <BookOpen
@@ -194,53 +188,40 @@ function LessonRow({
   isLocked: boolean;
 }) {
   const lessonNumber = lesson.index + 1;
+
   const node = isDone ? (
-    <span className="relative z-10 w-10 h-10 rounded-full bg-[var(--green)] text-white flex items-center justify-center shadow-sm">
+    <span className="w-10 h-10 rounded-full bg-[var(--green)] text-white flex items-center justify-center shadow-sm shrink-0">
       <Check size={18} strokeWidth={3} />
     </span>
   ) : isCurrent ? (
-    <span className="relative z-10 w-10 h-10 rounded-full bg-[var(--green-deep)] text-white flex items-center justify-center font-medium tabular-nums shadow-sm">
+    <span className="w-10 h-10 rounded-full bg-[var(--green-deep)] text-white flex items-center justify-center font-medium tabular-nums shadow-sm shrink-0">
       {lessonNumber}
     </span>
   ) : (
-    <span className="relative z-10 w-10 h-10 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground-soft)] flex items-center justify-center text-sm tabular-nums">
+    <span className="w-10 h-10 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground-soft)] flex items-center justify-center text-sm tabular-nums shrink-0">
       {lessonNumber}
     </span>
   );
 
-  const card = (
-    <div
-      className={cn(
-        "flex-1 min-w-0 rounded-2xl border bg-white px-4 sm:px-5 py-4 flex items-center gap-3 sm:gap-4 transition-all",
-        isCurrent
-          ? "border-[var(--green-soft)] bg-[var(--bamboo-soft)] shadow-sm"
-          : isDone
-            ? "border-[var(--border)] hover:shadow-sm"
-            : "border-[var(--border)] opacity-80"
-      )}
-    >
+  const content = (
+    <>
+      {node}
       <div className="flex-1 min-w-0">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--foreground-soft)] mb-1">
+        <div className="text-sm font-semibold italic text-[var(--foreground)] mb-0.5">
           Урок {lessonNumber}
         </div>
-        <div className="hanzi text-lg sm:text-xl tracking-wider text-[var(--foreground)] leading-tight">
-          {lesson.characters.join(" ")}
+        <div className="hanzi text-lg sm:text-xl tracking-[0.25em] text-[var(--foreground)] leading-tight">
+          {lesson.characters.join("\u2003")}
         </div>
         <div className="text-xs text-[var(--foreground-muted)] mt-1">
           {lesson.characters.length} иероглифов
-          {lesson.title && (
-            <>
-              {" · "}
-              <span className="text-[var(--foreground)]">{lesson.title}</span>
-            </>
-          )}
         </div>
       </div>
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {isDone && <DoneBadge />}
         {isCurrent && (
-          <span className="btn btn-primary h-10 px-4 text-sm whitespace-nowrap">
-            Продолжить <ArrowRight size={14} />
+          <span className="btn btn-primary h-10 px-5 text-sm whitespace-nowrap">
+            Продолжить
           </span>
         )}
         {isLocked && (
@@ -251,46 +232,51 @@ function LessonRow({
             <Lock size={16} />
           </span>
         )}
-        <ChevronRight
-          size={18}
-          className={cn(
-            "shrink-0",
-            isLocked
-              ? "text-[var(--foreground-soft)]"
-              : "text-[var(--foreground-muted)]"
-          )}
-        />
+        {!isLocked && (
+          <ChevronRight
+            size={18}
+            className="shrink-0 text-[var(--foreground-muted)]"
+          />
+        )}
       </div>
-    </div>
+    </>
   );
 
-  const rowClass =
-    "flex items-stretch gap-4 sm:gap-5 py-2.5 sm:py-3 first:pt-0 last:pb-0";
-  const nodeWrap = (
-    <div className="w-10 shrink-0 flex items-start justify-center pt-3">
-      {node}
-    </div>
-  );
+  const rowBase =
+    "flex items-center gap-4 sm:gap-5 px-2 sm:px-3 py-4 sm:py-5 transition-colors";
 
-  if (isLocked) {
+  if (isCurrent) {
     return (
-      <div
-        className={cn(rowClass, "cursor-not-allowed")}
-        aria-disabled="true"
+      <Link
+        href={`/learn/${lesson.id}`}
+        className={cn(
+          rowBase,
+          "rounded-2xl bg-[var(--bamboo-soft)] border border-[var(--green-soft)] -mx-3 px-5 sm:-mx-4 sm:px-7 my-1 group focus:outline-none"
+        )}
       >
-        {nodeWrap}
-        {card}
-      </div>
+        {content}
+      </Link>
     );
   }
+
+  if (isDone) {
+    return (
+      <Link
+        href={`/learn/${lesson.id}`}
+        className={cn(rowBase, "group hover:bg-[var(--surface-2)] focus:outline-none")}
+      >
+        {content}
+      </Link>
+    );
+  }
+
   return (
-    <Link
-      href={`/learn/${lesson.id}`}
-      className={cn(rowClass, "group focus:outline-none")}
+    <div
+      className={cn(rowBase, "cursor-not-allowed opacity-75")}
+      aria-disabled="true"
     >
-      {nodeWrap}
-      {card}
-    </Link>
+      {content}
+    </div>
   );
 }
 
