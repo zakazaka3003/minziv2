@@ -25,6 +25,7 @@ interface WriterAPI {
     showHintAfterMisses?: number;
   }) => void;
   cancelQuiz: () => void;
+  showCharacter: () => void;
   getCharacterData: () => Promise<{ strokes: unknown[] }>;
 }
 
@@ -105,6 +106,7 @@ export function WritingQuiz({
           },
           onComplete: (info) => {
             if (cancelled) return;
+            writer.showCharacter();
             setFeedback({
               tone: "ok",
               text:

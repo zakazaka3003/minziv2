@@ -19,6 +19,7 @@ type Step =
   | { kind: "intro"; charIdx: number }
   | { kind: "stroke"; charIdx: number }
   | { kind: "guided"; charIdx: number }
+  | { kind: "recall"; charIdx: number }
   | { kind: "practice"; charIdx: number; taskIdx: 0 | 1 }
   | { kind: "grammar" }
   | { kind: "summary" };
@@ -34,7 +35,7 @@ export function LessonFlow({ lesson, characters, pool, onExit }: Props) {
   const recordOutcome = useProgress((s) => s.recordOutcome);
   const completeLesson = useProgress((s) => s.completeLesson);
 
-  const totalCharSteps = characters.length * 4; // 4 steps per char
+  const totalCharSteps = characters.length * 5; // 5 steps per char
   const totalSteps = totalCharSteps + (lesson.grammarNote ? 1 : 0) + 1;
   const [stepIdx, setStepIdx] = useState(0);
   // Per-step selected grapheme index → drives the static stroke highlight on
@@ -44,11 +45,12 @@ export function LessonFlow({ lesson, characters, pool, onExit }: Props) {
 
   const step: Step = useMemo(() => {
     if (stepIdx < totalCharSteps) {
-      const charIdx = Math.floor(stepIdx / 4);
-      const phase = stepIdx % 4;
+      const charIdx = Math.floor(stepIdx / 5);
+      const phase = stepIdx % 5;
       if (phase === 0) return { kind: "intro", charIdx };
       if (phase === 1) return { kind: "stroke", charIdx };
       if (phase === 2) return { kind: "guided", charIdx };
+      if (phase === 3) return { kind: "recall", charIdx };
       return { kind: "practice", charIdx, taskIdx: 0 };
     }
     if (lesson.grammarNote && stepIdx === totalCharSteps) {
@@ -183,6 +185,38 @@ export function LessonFlow({ lesson, characters, pool, onExit }: Props) {
         <Card className="p-8 sm:p-10 flex flex-col items-center gap-5 float-up">
           <div className="text-center">
             <div className="text-xs uppercase tracking-[0.2em] text-[var(--foreground-soft)]">
+              Пишите по образцу
+            </div>
+            <div className="mt-2 pinyin text-[var(--foreground-muted)]">
+              {characters[step.charIdx].pinyin} ·{" "}
+              {meaningRu(characters[step.charIdx])}
+            </div>
+          </div>
+          <WritingQuiz
+            key={`guided-${characters[step.charIdx].hanzi}`}
+            hanzi={characters[step.charIdx].hanzi}
+            size={300}
+            showOutline={true}
+            onComplete={({ totalMistakes }) => {
+              recordOutcome(
+                characters[step.charIdx].hanzi,
+                totalMistakes === 0 ? "easy" : totalMistakes <= 2 ? "good" : "hard"
+              );
+              setExerciseDone(true);
+            }}
+          />
+          {exerciseDone && (
+            <Button onClick={next} size="lg">
+              Дальше <ArrowRight size={16} />
+            </Button>
+          )}
+        </Card>
+      )}
+
+      {step.kind === "recall" && (
+        <Card className="p-8 sm:p-10 flex flex-col items-center gap-5 float-up">
+          <div className="text-center">
+            <div className="text-xs uppercase tracking-[0.2em] text-[var(--foreground-soft)]">
               Напишите по памяти
             </div>
             <div className="mt-2 pinyin text-[var(--foreground-muted)]">
@@ -191,7 +225,7 @@ export function LessonFlow({ lesson, characters, pool, onExit }: Props) {
             </div>
           </div>
           <WritingQuiz
-            key={`quiz-${characters[step.charIdx].hanzi}`}
+            key={`recall-${characters[step.charIdx].hanzi}`}
             hanzi={characters[step.charIdx].hanzi}
             size={300}
             showOutline={false}
