@@ -247,12 +247,12 @@ function WarmupCard({
         {/* Cross grid lines (田字格 style) */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 220 220">
           {/* Horizontal center line */}
-          <line x1="12" y1="110" x2="208" y2="110" stroke="#d4d4d8" strokeWidth="0.8" strokeDasharray="4 3" opacity="0.6" />
+          <line x1="8" y1="110" x2="212" y2="110" stroke="#a1a1aa" strokeWidth="1" strokeDasharray="6 4" opacity="0.4" />
           {/* Vertical center line */}
-          <line x1="110" y1="12" x2="110" y2="208" stroke="#d4d4d8" strokeWidth="0.8" strokeDasharray="4 3" opacity="0.6" />
+          <line x1="110" y1="8" x2="110" y2="212" stroke="#a1a1aa" strokeWidth="1" strokeDasharray="6 4" opacity="0.4" />
           {/* Diagonal lines (X pattern) */}
-          <line x1="12" y1="12" x2="208" y2="208" stroke="#d4d4d8" strokeWidth="0.6" strokeDasharray="4 3" opacity="0.35" />
-          <line x1="208" y1="12" x2="12" y2="208" stroke="#d4d4d8" strokeWidth="0.6" strokeDasharray="4 3" opacity="0.35" />
+          <line x1="8" y1="8" x2="212" y2="212" stroke="#a1a1aa" strokeWidth="0.8" strokeDasharray="6 4" opacity="0.25" />
+          <line x1="212" y1="8" x2="8" y2="212" stroke="#a1a1aa" strokeWidth="0.8" strokeDasharray="6 4" opacity="0.25" />
         </svg>
         {/* Character */}
         <div className="absolute inset-0 flex items-center justify-center">

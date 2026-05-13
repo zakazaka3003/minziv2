@@ -20,6 +20,7 @@ const maShanZheng = Ma_Shan_Zheng({
   variable: "--font-brush",
   weight: "400",
   subsets: ["latin"],
+  preload: false,
   display: "swap",
 });
 
