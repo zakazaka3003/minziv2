@@ -239,41 +239,57 @@ function WarmupCard({
   onForgot: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center gap-5 float-up">
-      <p className="text-sm text-[var(--foreground-muted)]">Знаете этот иероглиф?</p>
+    <div className="flex flex-col items-center gap-6 float-up w-full max-w-md mx-auto">
+      <p className="text-sm text-[var(--foreground-muted)] tracking-wide">Знаете этот иероглиф?</p>
 
-      <div className="card p-8 flex flex-col items-center gap-4 min-w-[280px]">
-        <div className="flex items-center gap-3">
-          <span className="hanzi text-8xl leading-none">{char.hanzi}</span>
-          <button onClick={() => speak(char.hanzi)} className="btn btn-ghost h-9 w-9 p-0">
-            <Volume2 size={16} />
-          </button>
+      {/* Character card with cross grid background */}
+      <div className="relative w-[220px] h-[220px] rounded-2xl border border-[var(--border)] bg-white shadow-sm overflow-hidden">
+        {/* Cross grid lines (田字格 style) */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 220 220">
+          {/* Horizontal center line */}
+          <line x1="12" y1="110" x2="208" y2="110" stroke="#d4d4d8" strokeWidth="0.8" strokeDasharray="4 3" opacity="0.6" />
+          {/* Vertical center line */}
+          <line x1="110" y1="12" x2="110" y2="208" stroke="#d4d4d8" strokeWidth="0.8" strokeDasharray="4 3" opacity="0.6" />
+          {/* Diagonal lines (X pattern) */}
+          <line x1="12" y1="12" x2="208" y2="208" stroke="#d4d4d8" strokeWidth="0.6" strokeDasharray="4 3" opacity="0.35" />
+          <line x1="208" y1="12" x2="12" y2="208" stroke="#d4d4d8" strokeWidth="0.6" strokeDasharray="4 3" opacity="0.35" />
+        </svg>
+        {/* Character */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-[120px] leading-none text-zinc-800 select-none" style={{ fontFamily: "var(--font-brush), 'KaiTi', 'STKaiti', serif" }}>{char.hanzi}</span>
         </div>
-        <span className="pinyin text-lg text-[var(--foreground-muted)]">{char.pinyin}</span>
       </div>
 
-      <div className="flex gap-4 w-full max-w-sm">
+      {/* Pinyin + audio */}
+      <div className="flex items-center gap-2">
+        <span className="pinyin text-lg text-[var(--foreground-muted)]">{char.pinyin}</span>
+        <button onClick={() => speak(char.hanzi)} className="btn btn-ghost h-8 w-8 p-0 rounded-full">
+          <Volume2 size={14} className="text-[var(--foreground-soft)]" />
+        </button>
+      </div>
+
+      {/* Know / Forgot buttons */}
+      <div className="flex gap-4 w-full">
         <button
           onClick={onForgot}
-          className="flex-1 rounded-[var(--radius-md)] border border-[var(--red)]/20 bg-[var(--red-soft)] px-6 py-4 flex flex-col items-center gap-2 hover:shadow-md active:scale-[0.98] transition-all"
+          className="flex-1 rounded-2xl border border-[var(--red)]/15 bg-[var(--red-soft)] px-5 py-5 flex flex-col items-center gap-2.5 hover:shadow-md hover:border-[var(--red)]/30 active:scale-[0.97] transition-all"
         >
-          <ThumbsDown size={24} className="text-[var(--red)]" />
-          <span className="font-medium text-[var(--red-deep)]">Не помню</span>
+          <ThumbsDown size={28} className="text-[var(--red)]" />
+          <span className="font-semibold text-[var(--red-deep)] text-base">Не помню</span>
         </button>
         <button
           onClick={onKnow}
-          className="flex-1 rounded-[var(--radius-md)] border border-[var(--green)]/20 bg-[var(--green-soft)] px-6 py-4 flex flex-col items-center gap-2 hover:shadow-md active:scale-[0.98] transition-all"
+          className="flex-1 rounded-2xl border border-[var(--green)]/15 bg-[var(--green-soft)] px-5 py-5 flex flex-col items-center gap-2.5 hover:shadow-md hover:border-[var(--green)]/30 active:scale-[0.97] transition-all"
         >
-          <ThumbsUp size={24} className="text-[var(--green)]" />
-          <span className="font-medium text-[var(--green-deep)]">Помню</span>
+          <ThumbsUp size={28} className="text-[var(--green)]" />
+          <span className="font-semibold text-[var(--green-deep)] text-base">Помню</span>
         </button>
       </div>
 
-      <div className="text-center mt-2">
-        <p className="text-xs text-[var(--foreground-soft)]">
-          {meaningRu(char) || char.meaningPrimary}
-        </p>
-      </div>
+      {/* Meaning hint */}
+      <p className="text-sm text-[var(--foreground-soft)]">
+        {meaningRu(char) || char.meaningPrimary}
+      </p>
     </div>
   );
 }

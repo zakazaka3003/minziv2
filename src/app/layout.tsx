@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Cormorant_Garamond } from "next/font/google";
+import { Inter, Cormorant_Garamond, Ma_Shan_Zheng } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
 
@@ -13,6 +13,13 @@ const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
   subsets: ["latin", "cyrillic"],
   weight: ["400", "500", "600"],
+  display: "swap",
+});
+
+const maShanZheng = Ma_Shan_Zheng({
+  variable: "--font-brush",
+  weight: "400",
+  subsets: ["latin"],
   display: "swap",
 });
 
@@ -31,7 +38,7 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${inter.variable} ${cormorant.variable} h-full antialiased`}
+      className={`${inter.variable} ${cormorant.variable} ${maShanZheng.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-rice">
         <Providers>{children}</Providers>
