@@ -779,9 +779,9 @@ export default function ReviewPage() {
         <PhaseProgress phase={phase} phases={sessionPhases} />
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
-          <div>
+          <div className="flex flex-col items-center lg:items-stretch">
             {/* Session progress row */}
-            <div className="flex items-center gap-3 mb-5">
+            <div className="flex items-center gap-3 mb-5 w-full">
               {phase === "warmup" && <Brain size={16} className="text-[var(--foreground-muted)]" />}
               {phase === "recognition" && <HelpCircle size={16} className="text-[var(--foreground-muted)]" />}
               {phase === "writing" && <PenTool size={16} className="text-[var(--foreground-muted)]" />}
@@ -838,7 +838,7 @@ export default function ReviewPage() {
 
             {/* ─── WRITING PHASE ─── */}
             {phase === "writing" && (
-              <div className="float-up">
+              <div className="float-up w-full">
                 <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6">
                   {/* Left: character info */}
                   <div className="card p-5 flex flex-col gap-3">
