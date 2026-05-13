@@ -34,7 +34,7 @@ export function Header() {
         </nav>
         <div className="ml-auto flex items-center gap-3 shrink-0">
           <Link
-            href="/learn"
+            href="/login"
             className="text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors hidden sm:block"
           >
             Войти
