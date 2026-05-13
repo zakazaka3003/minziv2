@@ -177,11 +177,11 @@ function WeakCharsList({ chars }: { chars: Record<string, CharProgress> }) {
 
 /* ─── SRS Outcome Buttons with Pandas ───────────────────────────────── */
 
-const SRS_BUTTONS: { id: Outcome; label: string; sublabel: string; color: string; bgColor: string; pandaSrc: string }[] = [
-  { id: "again", label: "Снова", sublabel: "Очень сложно", color: "text-[var(--red-deep)]", bgColor: "bg-[var(--red-soft)] border-[var(--red)]/30", pandaSrc: "/panda/panda_head_sad.png" },
-  { id: "hard", label: "Трудно", sublabel: "Было сложно", color: "text-amber-800", bgColor: "bg-amber-50 border-amber-300/50", pandaSrc: "/panda/panda_head_neutral.png" },
-  { id: "good", label: "Хорошо", sublabel: "Понял(а)", color: "text-[var(--green-deep)]", bgColor: "bg-[var(--green-soft)] border-[var(--green)]/30", pandaSrc: "/panda/panda_head_smile.png" },
-  { id: "easy", label: "Легко", sublabel: "Очень легко", color: "text-[var(--green-deep)]", bgColor: "bg-[var(--bamboo-soft)] border-[var(--bamboo)]/30", pandaSrc: "/panda/panda_head_happy.png" },
+const SRS_BUTTONS: { id: Outcome; label: string; tag: string; sublabel: string; color: string; bgColor: string; pandaSrc: string }[] = [
+  { id: "again", label: "Снова", tag: "Повтор!", sublabel: "Очень сложно", color: "text-[var(--red-deep)]", bgColor: "bg-[var(--red-soft)] border-[var(--red)]/20", pandaSrc: "/panda/panda_head_sad.png" },
+  { id: "hard", label: "Трудно", tag: "Опять", sublabel: "Было сложно", color: "text-amber-800", bgColor: "bg-amber-50 border-amber-200", pandaSrc: "/panda/panda_head_neutral.png" },
+  { id: "good", label: "Хорошо", tag: "ок", sublabel: "Понял(а)", color: "text-[var(--green-deep)]", bgColor: "bg-[var(--green-soft)] border-[var(--green)]/20", pandaSrc: "/panda/panda_head_smile.png" },
+  { id: "easy", label: "Легко", tag: "Скоро", sublabel: "Очень легко", color: "text-[var(--green-deep)]", bgColor: "bg-[var(--bamboo-soft)] border-[var(--bamboo)]/20", pandaSrc: "/panda/panda_head_happy.png" },
 ];
 
 /* ─── Recognition Quiz ──────────────────────────────────────────────── */
@@ -501,177 +501,243 @@ export default function ReviewPage() {
     );
   }
 
+  /* ─── Right sidebar (shared between session & dashboard) ──────────── */
+  const rightSidebar = (
+    <div className="space-y-5 hidden lg:block">
+      {/* Today stats */}
+      <Card className="p-5">
+        <h3 className="font-medium mb-4">Сегодня</h3>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-[var(--green)] tabular-nums">{dueCnt || todayReviewed}</div>
+            <div className="text-[11px] text-[var(--foreground-muted)]">к изучению</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-[var(--red)] tabular-nums">{weakCnt}</div>
+            <div className="text-[11px] text-[var(--foreground-muted)]">слабых</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 mb-2">
+          <Clock size={14} className="text-[var(--foreground-muted)]" />
+          <span className="text-sm text-[var(--foreground-muted)]">{Math.max(1, Math.round(todayReviewed * 0.7))} мин потрачено</span>
+        </div>
+        {/* Mini bar chart */}
+        <div className="flex items-end gap-1 h-12 mt-3">
+          {todayBars.map((bar, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-t bg-[var(--green)] transition-all"
+              style={{ height: `${bar.height}%` }}
+              title={`${bar.date}: ${bar.reviewed}`}
+            />
+          ))}
+        </div>
+      </Card>
+
+      {/* Weak characters */}
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium">Слабые иероглифы</h3>
+          {weakCnt > 0 && (
+            <button onClick={() => startSession("weak")} className="text-xs text-[var(--green)] font-medium hover:underline">
+              Смотреть все
+            </button>
+          )}
+        </div>
+        <WeakCharsList chars={chars} />
+      </Card>
+
+      {/* Heatmap */}
+      <Card className="p-5">
+        <h3 className="font-medium mb-3">Календарь повторений</h3>
+        <ReviewHeatmap daily={daily} />
+      </Card>
+
+      {/* Motivational card */}
+      <div className="rounded-[var(--radius-lg)] overflow-hidden relative bg-gradient-to-br from-[var(--green-soft)] to-[var(--bamboo-soft)] p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex-1">
+            <h3 className="font-semibold text-[var(--green-deep)] mb-1">Отличная работа!</h3>
+            <p className="text-xs text-[var(--green-deep)] opacity-80">Постоянство — ключ к успеху.</p>
+          </div>
+          <Panda mood="practicing" size={80} />
+        </div>
+      </div>
+    </div>
+  );
+
   /* ─── Active review session ───────────────────────────────────────── */
   if (phase !== "idle" && currentChar) {
-    const progress = queue.length > 0 ? ((queueIdx + 1) / queue.length) * 100 : 0;
-
     return (
-      <div className="max-w-5xl mx-auto px-4 sm:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
         {/* Header */}
-        <header className="mb-6">
-          <h1 className="text-2xl font-display font-semibold mb-1 text-[var(--ink)]">Повторение</h1>
-          <p className="text-sm text-[var(--foreground-muted)] mb-1">Сегодняшняя цель</p>
-          <div className="flex items-center gap-4 mb-4">
-            <div className="flex items-end gap-2">
-              <span className="text-3xl font-bold text-[var(--green)] leading-none tabular-nums">{todayReviewed}</span>
-              <span className="text-sm text-[var(--foreground-muted)] pb-0.5">/ 30 мин</span>
-            </div>
-            <div className="flex-1 h-2 rounded-full bg-[var(--surface-3)] overflow-hidden">
-              <div
-                className="h-full rounded-full bg-[var(--green)] transition-[width] duration-500"
-                style={{ width: `${Math.min(100, (todayReviewed / 30) * 100)}%` }}
-              />
-            </div>
-            {streak > 0 && (
-              <div className="streak-pill text-sm">
-                <span>🔥</span>
-                <span>{streak} {pluralDays(streak)} подряд</span>
-              </div>
-            )}
+        <h1 className="text-3xl font-display font-semibold mb-1 text-[var(--ink)]">Повторение</h1>
+        <p className="text-sm text-[var(--foreground-muted)] mb-1">Сегодняшняя цель</p>
+        <div className="flex items-end gap-3 mb-2">
+          <span className="text-4xl font-bold text-[var(--green)] leading-none tabular-nums">{todayReviewed}</span>
+          <span className="text-base text-[var(--foreground-muted)] pb-0.5">/ 30 мин</span>
+        </div>
+        <div className="flex items-center gap-4 mb-6">
+          <div className="flex-1 h-2.5 rounded-full bg-[var(--surface-3)] overflow-hidden max-w-lg">
+            <div
+              className="h-full rounded-full bg-[var(--green)] transition-[width] duration-500"
+              style={{ width: `${Math.min(100, (todayReviewed / 30) * 100)}%` }}
+            />
           </div>
+          {streak > 0 && (
+            <div className="streak-pill">
+              <span>🔥</span>
+              <span>{streak} {pluralDays(streak)} подряд</span>
+            </div>
+          )}
+        </div>
 
-          {/* Session progress */}
-          <div className="flex items-center gap-3">
-            <PenTool size={16} className="text-[var(--foreground-muted)]" />
-            <span className="text-sm text-[var(--foreground-muted)]">Письменное повторение</span>
-            <span className="text-sm tabular-nums text-[var(--foreground-muted)]">{queueIdx + 1} / {queue.length}</span>
-            <div className="flex-1" />
-            <button onClick={() => setPhase("summary")} className="btn btn-ghost text-sm py-1.5 px-3">
-              Пропустить ⏭
-            </button>
-          </div>
-        </header>
-
-        {/* Main writing area - 2 column */}
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
-          {/* Left: character info */}
-          <div className="card p-6 flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <button onClick={() => speak(currentChar.hanzi)} className="btn btn-ghost h-9 w-9 p-0">
-                <Volume2 size={18} />
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+          {/* ─── Main session content ──────────────────────────────── */}
+          <div>
+            {/* Session progress row */}
+            <div className="flex items-center gap-3 mb-5">
+              <PenTool size={16} className="text-[var(--foreground-muted)]" />
+              <span className="text-sm font-medium">Письменное повторение</span>
+              <span className="text-sm tabular-nums text-[var(--foreground-muted)]">{queueIdx + 1} / {queue.length}</span>
+              <div className="flex-1" />
+              <button onClick={() => setPhase("summary")} className="btn btn-ghost text-sm py-1.5 px-3">
+                Пропустить ⏭
               </button>
-              <span className="pinyin text-xl">{currentChar.pinyin}</span>
             </div>
 
-            <div className="hanzi text-8xl text-center leading-none py-4">{currentChar.hanzi}</div>
-            <div className="text-center text-lg font-medium">{meaningRu(currentChar) || currentChar.meaningPrimary}</div>
-
-            {currentChar.components && currentChar.components.length > 0 && (
-              <div>
-                <p className="text-xs text-[var(--foreground-muted)] mb-1.5">Состоит из:</p>
-                <div className="flex items-center gap-2 justify-center">
-                  {currentChar.components.map((comp, i) => (
-                    <span key={i} className="flex items-center gap-2">
-                      {i > 0 && <span className="text-[var(--foreground-soft)]">+</span>}
-                      <span className="hanzi text-2xl card-soft px-3 py-1.5">{comp}</span>
-                    </span>
-                  ))}
+            {/* Character info + Writing canvas — 2 columns */}
+            <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
+              {/* Left: character info */}
+              <div className="card p-5 flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <button onClick={() => speak(currentChar.hanzi)} className="btn btn-ghost h-9 w-9 p-0">
+                    <Volume2 size={18} />
+                  </button>
+                  <span className="pinyin text-xl">{currentChar.pinyin}</span>
                 </div>
-              </div>
-            )}
 
-            <div>
-              <p className="text-xs text-[var(--foreground-muted)] mb-1">Примеры:</p>
-              <div className="flex gap-3 hanzi text-xl text-[var(--foreground-muted)]">
-                {ALL_CHARACTERS
-                  .filter((c) => c.hanzi !== currentChar.hanzi && c.hanzi.includes(currentChar.hanzi))
-                  .slice(0, 3)
-                  .map((c) => (
-                    <span key={c.hanzi}>{c.hanzi}</span>
-                  ))}
-                {/* Compound words */}
-                {currentChar.hanzi === "你" && <><span>你好</span><span>你们</span><span>你是</span></>}
-                {currentChar.hanzi === "我" && <><span>我们</span><span>我的</span></>}
-                {currentChar.hanzi === "是" && <><span>是的</span><span>不是</span></>}
-              </div>
-            </div>
-          </div>
+                <div className="hanzi text-8xl text-center leading-none py-4">{currentChar.hanzi}</div>
+                <div className="text-center text-lg font-medium">{meaningRu(currentChar) || currentChar.meaningPrimary}</div>
 
-          {/* Right: writing canvas + actions */}
-          <div className="flex flex-col items-center gap-4">
-            <p className="text-sm text-[var(--foreground-muted)]">
-              Напишите иероглиф. Соблюдайте порядок черт.
-            </p>
-
-            <div className="flex items-start gap-4">
-              <div className="relative">
-                {showStrokeOrder ? (
-                  <div className="rounded-[18px] border border-[var(--border)] bg-white overflow-hidden" style={{ width: 324, height: 324, padding: 12 }}>
-                    <StrokeAnimation hanzi={currentChar.hanzi} size={300} autoplay />
+                {currentChar.components && currentChar.components.length > 0 && (
+                  <div>
+                    <p className="text-xs text-[var(--foreground-muted)] mb-1.5">Состоит из:</p>
+                    <div className="flex items-center gap-2 justify-center">
+                      {currentChar.components.map((comp, i) => (
+                        <span key={i} className="flex items-center gap-2">
+                          {i > 0 && <span className="text-[var(--foreground-soft)]">+</span>}
+                          <span className="hanzi text-2xl card-soft px-3 py-1.5">{comp}</span>
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                ) : (
-                  <WritingQuiz
-                    key={`${currentHanzi}-${queueIdx}`}
-                    hanzi={currentChar.hanzi}
-                    size={300}
-                    showOutline
-                    onComplete={(info) => {
-                      setWritingDone(true);
-                      setSessionStats((s) => ({ ...s, written: s.written + 1 }));
-                    }}
-                  />
                 )}
-              </div>
 
-              {/* Side buttons */}
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => {
-                    setShowStrokeOrder(false);
-                    setWritingDone(false);
-                  }}
-                  className="card-soft w-14 h-14 flex flex-col items-center justify-center gap-0.5 hover:bg-[var(--surface-2)] transition-colors"
-                  title="Заново"
-                >
-                  <RotateCcw size={20} className="text-[var(--foreground-muted)]" />
-                  <span className="text-[10px] text-[var(--foreground-muted)]">Заново</span>
-                </button>
-                <button
-                  onClick={() => setShowStrokeOrder(!showStrokeOrder)}
-                  className="card-soft w-14 h-14 flex flex-col items-center justify-center gap-0.5 hover:bg-[var(--surface-2)] transition-colors"
-                  title="Показать порядок"
-                >
-                  <Eye size={20} className="text-[var(--foreground-muted)]" />
-                  <span className="text-[10px] text-[var(--foreground-muted)] leading-tight text-center">Показать порядок</span>
-                </button>
-              </div>
-            </div>
-
-            {/* SRS Buttons with Pandas */}
-            <div className="grid grid-cols-4 gap-3 w-full max-w-lg mt-2">
-              {SRS_BUTTONS.map(({ id, label, sublabel, color, bgColor, pandaSrc }) => (
-                <button
-                  key={id}
-                  onClick={() => handleSRSOutcome(id)}
-                  className={cn(
-                    "rounded-[18px] border px-3 py-4 flex flex-col items-center gap-2 transition-all hover:shadow-md hover:-translate-y-0.5",
-                    bgColor, color,
-                  )}
-                >
-                  <Image src={pandaSrc} alt={label} width={48} height={48} className="select-none" />
-                  <span className="font-semibold text-sm">{label}</span>
-                  <span className="text-[11px] opacity-70">{sublabel}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Tip section */}
-            <div className="w-full max-w-lg">
-              <button
-                onClick={() => setShowTip(!showTip)}
-                className="flex items-center gap-2 text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors w-full"
-              >
-                <span className="text-lg">⚙️</span>
-                <span className="font-medium text-[var(--green-deep)]">Совет</span>
-                <ChevronDown size={14} className={cn("transition-transform", showTip && "rotate-180")} />
-              </button>
-              {showTip && (
-                <div className="mt-2 text-sm text-[var(--foreground-muted)] pl-7">
-                  {getRandomTip(currentChar.hanzi)}
+                <div>
+                  <p className="text-xs text-[var(--foreground-muted)] mb-1">Примеры:</p>
+                  <div className="flex gap-3 hanzi text-xl text-[var(--foreground-muted)]">
+                    {ALL_CHARACTERS
+                      .filter((c) => c.hanzi !== currentChar.hanzi && c.hanzi.includes(currentChar.hanzi))
+                      .slice(0, 3)
+                      .map((c) => (
+                        <span key={c.hanzi}>{c.hanzi}</span>
+                      ))}
+                    {currentChar.hanzi === "你" && <><span>你好</span><span>你们</span><span>你是</span></>}
+                    {currentChar.hanzi === "我" && <><span>我们</span><span>我的</span></>}
+                    {currentChar.hanzi === "是" && <><span>是的</span><span>不是</span></>}
+                  </div>
                 </div>
-              )}
+              </div>
+
+              {/* Right: writing canvas + actions */}
+              <div className="flex flex-col items-center gap-4">
+                <p className="text-sm text-[var(--foreground-muted)]">
+                  Напишите иероглиф. Соблюдайте порядок черт.
+                </p>
+
+                <div className="flex items-start gap-4">
+                  <div className="relative">
+                    {showStrokeOrder ? (
+                      <div className="rounded-[18px] border border-[var(--border)] bg-white overflow-hidden" style={{ width: 324, height: 324, padding: 12 }}>
+                        <StrokeAnimation hanzi={currentChar.hanzi} size={300} autoplay />
+                      </div>
+                    ) : (
+                      <WritingQuiz
+                        key={`${currentHanzi}-${queueIdx}`}
+                        hanzi={currentChar.hanzi}
+                        size={300}
+                        showOutline
+                        onComplete={() => {
+                          setWritingDone(true);
+                          setSessionStats((s) => ({ ...s, written: s.written + 1 }));
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Side buttons */}
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={() => { setShowStrokeOrder(false); setWritingDone(false); }}
+                      className="card-soft w-14 h-14 flex flex-col items-center justify-center gap-0.5 hover:bg-[var(--surface-2)] transition-colors"
+                      title="Заново"
+                    >
+                      <RotateCcw size={20} className="text-[var(--foreground-muted)]" />
+                      <span className="text-[10px] text-[var(--foreground-muted)]">Заново</span>
+                    </button>
+                    <button
+                      onClick={() => setShowStrokeOrder(!showStrokeOrder)}
+                      className="card-soft w-14 h-14 flex flex-col items-center justify-center gap-0.5 hover:bg-[var(--surface-2)] transition-colors"
+                      title="Показать порядок"
+                    >
+                      <Eye size={20} className="text-[var(--foreground-muted)]" />
+                      <span className="text-[10px] text-[var(--foreground-muted)] leading-tight text-center">Показать<br/>порядок</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* SRS Buttons with Pandas */}
+                <div className="grid grid-cols-4 gap-3 w-full mt-2">
+                  {SRS_BUTTONS.map(({ id, label, tag, sublabel, color, bgColor, pandaSrc }) => (
+                    <button
+                      key={id}
+                      onClick={() => handleSRSOutcome(id)}
+                      className={cn(
+                        "rounded-[18px] border px-3 py-4 flex flex-col items-center gap-1.5 transition-all hover:shadow-md active:scale-[0.98]",
+                        bgColor, color,
+                      )}
+                    >
+                      <span className="text-[10px] font-medium opacity-60">{tag}</span>
+                      <Image src={pandaSrc} alt={label} width={44} height={44} className="select-none" />
+                      <span className="font-semibold text-sm">{label}</span>
+                      <span className="text-[11px] opacity-60">{sublabel}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Tip section */}
+                <div className="w-full">
+                  <button
+                    onClick={() => setShowTip(!showTip)}
+                    className="flex items-center gap-2 text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors w-full"
+                  >
+                    <Target size={16} className="text-[var(--foreground-muted)]" />
+                    <span className="font-medium text-[var(--green-deep)]">Совет</span>
+                    <ChevronDown size={14} className={cn("transition-transform ml-auto", showTip && "rotate-180")} />
+                  </button>
+                  {showTip && (
+                    <div className="mt-2 text-sm text-[var(--foreground-muted)] pl-7">
+                      {getRandomTip(currentChar.hanzi)}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Right sidebar — always visible during session */}
+          {rightSidebar}
         </div>
       </div>
     );
@@ -810,67 +876,7 @@ export default function ReviewPage() {
         </div>
 
         {/* ─── Right sidebar ────────────────────────────────────────── */}
-        <div className="space-y-5">
-          {/* Today stats */}
-          <Card className="p-5">
-            <h3 className="font-medium mb-4">Сегодня</h3>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-[var(--green)]">{todayReviewed}</div>
-                <div className="text-[11px] text-[var(--foreground-muted)]">к изучению</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-[var(--red)]">{weakCnt}</div>
-                <div className="text-[11px] text-[var(--foreground-muted)]">слабых</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 mb-2">
-              <Clock size={14} className="text-[var(--foreground-muted)]" />
-              <span className="text-sm text-[var(--foreground-muted)]">{Math.max(1, Math.round(todayReviewed * 0.7))} мин потрачено</span>
-            </div>
-            {/* Mini bar chart */}
-            <div className="flex items-end gap-1 h-12 mt-3">
-              {todayBars.map((bar, i) => (
-                <div
-                  key={i}
-                  className="flex-1 rounded-t bg-[var(--green)] transition-all"
-                  style={{ height: `${bar.height}%` }}
-                  title={`${bar.date}: ${bar.reviewed}`}
-                />
-              ))}
-            </div>
-          </Card>
-
-          {/* Weak characters */}
-          <Card className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium">Слабые иероглифы</h3>
-              {weakCnt > 0 && (
-                <button onClick={() => startSession("weak")} className="text-xs text-[var(--green)] font-medium hover:underline">
-                  Смотреть все
-                </button>
-              )}
-            </div>
-            <WeakCharsList chars={chars} />
-          </Card>
-
-          {/* Heatmap */}
-          <Card className="p-5">
-            <h3 className="font-medium mb-3">Календарь повторений</h3>
-            <ReviewHeatmap daily={daily} />
-          </Card>
-
-          {/* Motivational card */}
-          <div className="rounded-[var(--radius-lg)] overflow-hidden relative bg-gradient-to-br from-[var(--green-soft)] to-[var(--bamboo-soft)] p-5">
-            <div className="flex items-start gap-3">
-              <div className="flex-1">
-                <h3 className="font-semibold text-[var(--green-deep)] mb-1">Отличная работа!</h3>
-                <p className="text-xs text-[var(--green-deep)] opacity-80">Постоянство — ключ к успеху.</p>
-              </div>
-              <Panda mood="practicing" size={80} />
-            </div>
-          </div>
-        </div>
+        {rightSidebar}
       </div>
     </div>
   );
