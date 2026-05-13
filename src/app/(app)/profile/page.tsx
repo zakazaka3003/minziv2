@@ -21,6 +21,9 @@ import {
   ArrowRight,
   User,
   Mail,
+  Send,
+  UserCheck,
+  Search,
 } from "lucide-react";
 
 interface FriendUser {
@@ -33,6 +36,20 @@ interface FriendUser {
 interface PendingRequest {
   id: string;
   user: FriendUser;
+}
+
+interface OutgoingRequest {
+  id: string;
+  friend: FriendUser;
+}
+
+interface SearchResult {
+  id: string;
+  name: string | null;
+  username: string | null;
+  image: string | null;
+  level: string;
+  friendStatus: string | null;
 }
 
 const AVATAR_OPTIONS = [
@@ -60,10 +77,15 @@ export default function ProfilePage() {
 
   const [friends, setFriends] = useState<FriendUser[]>([]);
   const [pending, setPending] = useState<PendingRequest[]>([]);
+  const [outgoing, setOutgoing] = useState<OutgoingRequest[]>([]);
   const [friendUsername, setFriendUsername] = useState("");
   const [friendError, setFriendError] = useState("");
+  const [friendSuccess, setFriendSuccess] = useState("");
   const [friendLoading, setFriendLoading] = useState(false);
   const [showAvatars, setShowAvatars] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchTimeout = useState<ReturnType<typeof setTimeout> | null>(null);
 
   const [profile, setProfile] = useState<{
     name: string | null;
@@ -93,6 +115,7 @@ export default function ProfilePage() {
         const data = await res.json();
         setFriends(data.friends || []);
         setPending(data.pending || []);
+        setOutgoing(data.outgoing || []);
       }
     } catch { /* ignore */ }
   }, [isLoggedIn]);
@@ -139,22 +162,51 @@ export default function ProfilePage() {
     }
   };
 
-  const addFriend = async () => {
-    if (!friendUsername.trim()) return;
+  const searchUsers = useCallback(async (q: string) => {
+    if (q.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResults(data.users || []);
+      }
+    } catch { /* ignore */ }
+    finally { setSearchLoading(false); }
+  }, []);
+
+  const handleFriendInputChange = (val: string) => {
+    const clean = val.toLowerCase().replace(/[^a-z0-9_]/g, "");
+    setFriendUsername(clean);
+    setFriendError("");
+    setFriendSuccess("");
+    if (searchTimeout[0]) clearTimeout(searchTimeout[0]);
+    searchTimeout[0] = setTimeout(() => searchUsers(clean), 300);
+  };
+
+  const addFriend = async (username?: string) => {
+    const target = username || friendUsername.trim();
+    if (!target) return;
     setFriendLoading(true);
     setFriendError("");
+    setFriendSuccess("");
     try {
       const res = await fetch("/api/friends", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: friendUsername.trim() }),
+        body: JSON.stringify({ username: target }),
       });
       const data = await res.json();
       if (!res.ok) {
         setFriendError(data.error || "Ошибка");
         return;
       }
+      setFriendSuccess("Заявка отправлена!");
       setFriendUsername("");
+      setSearchResults([]);
       await fetchFriends();
     } catch {
       setFriendError("Ошибка сети");
@@ -459,30 +511,85 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Add friend */}
-        <div className="flex gap-2 mb-5">
-          <div className="relative flex-1">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--foreground-soft)] text-sm">@</span>
-            <input
-              type="text"
-              value={friendUsername}
-              onChange={(e) => setFriendUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
-              placeholder="username друга"
-              className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-[var(--border)] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[var(--green)]/20 focus:border-[var(--green)] transition-shadow font-mono"
-              onKeyDown={(e) => e.key === "Enter" && addFriend()}
-            />
+        {/* Add friend with search */}
+        <div className="relative mb-5">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--foreground-soft)]" />
+              <input
+                type="text"
+                value={friendUsername}
+                onChange={(e) => handleFriendInputChange(e.target.value)}
+                placeholder="Найти по юзернейму..."
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-[var(--border)] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[var(--green)]/20 focus:border-[var(--green)] transition-shadow font-mono"
+                onKeyDown={(e) => e.key === "Enter" && addFriend()}
+              />
+              {searchLoading && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-[var(--green)]/30 border-t-[var(--green)] rounded-full animate-spin" />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => addFriend()}
+              disabled={friendLoading || !friendUsername.trim()}
+              className="w-10 h-10 rounded-xl bg-[var(--green)] text-white flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-40"
+            >
+              <UserPlus size={16} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={addFriend}
-            disabled={friendLoading || !friendUsername.trim()}
-            className="w-10 h-10 rounded-xl bg-[var(--green)] text-white flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-40"
-          >
-            <UserPlus size={16} />
-          </button>
+
+          {/* Search results dropdown */}
+          {searchResults.length > 0 && friendUsername.length >= 2 && (
+            <div className="absolute left-0 right-12 top-full mt-1 bg-white rounded-xl border border-[var(--border)] shadow-lg z-10 overflow-hidden">
+              {searchResults.map((u) => (
+                <div
+                  key={u.id}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--surface-2)] transition-colors border-b border-[var(--border)] last:border-0"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-[var(--surface-2)] flex items-center justify-center text-lg border border-[var(--border)] flex-shrink-0">
+                    {u.image && u.image.length <= 4 ? u.image : <User size={16} className="text-[var(--foreground-soft)]" />}
+                  </div>
+                  <Link
+                    href={`/user/${u.username}`}
+                    className="flex-1 min-w-0 hover:underline"
+                    onClick={() => { setFriendUsername(""); setSearchResults([]); }}
+                  >
+                    <div className="text-sm font-medium truncate">{u.name || u.username}</div>
+                    <div className="text-xs text-[var(--foreground-muted)]">@{u.username} · {u.level}</div>
+                  </Link>
+                  {u.friendStatus === "friends" ? (
+                    <span className="text-[10px] text-[var(--green)] bg-[var(--green-soft)] px-2 py-1 rounded-lg flex items-center gap-1">
+                      <UserCheck size={10} /> Друзья
+                    </span>
+                  ) : u.friendStatus === "request_sent" ? (
+                    <span className="text-[10px] text-amber-600 bg-amber-50 px-2 py-1 rounded-lg flex items-center gap-1">
+                      <Send size={10} /> Отправлено
+                    </span>
+                  ) : u.friendStatus === "request_received" ? (
+                    <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
+                      Ожидает
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); addFriend(u.username || undefined); }}
+                      className="text-[10px] text-white bg-[var(--green)] px-2.5 py-1 rounded-lg flex items-center gap-1 hover:opacity-90"
+                    >
+                      <UserPlus size={10} /> Добавить
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         {friendError && (
           <div className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-xl mb-4">{friendError}</div>
+        )}
+        {friendSuccess && (
+          <div className="text-sm text-[var(--green)] bg-[var(--green-soft)] px-4 py-2 rounded-xl mb-4 flex items-center gap-2">
+            <Send size={14} /> {friendSuccess}
+          </div>
         )}
 
         {/* Pending requests */}
@@ -497,17 +604,17 @@ export default function ProfilePage() {
                   key={p.id}
                   className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--green-soft)]/30 border border-[var(--green)]/10"
                 >
-                  <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center text-lg border border-[var(--border)]">
+                  <Link href={`/user/${p.user.username}`} className="w-9 h-9 rounded-lg bg-white flex items-center justify-center text-lg border border-[var(--border)] flex-shrink-0">
                     {p.user.image && p.user.image.length <= 4 ? p.user.image : <User size={16} className="text-[var(--foreground-soft)]" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
+                  </Link>
+                  <Link href={`/user/${p.user.username}`} className="flex-1 min-w-0 hover:underline">
                     <div className="text-sm font-medium truncate">
                       {p.user.name || p.user.username || "—"}
                     </div>
                     {p.user.username && (
                       <div className="text-xs text-[var(--foreground-muted)]">@{p.user.username}</div>
                     )}
-                  </div>
+                  </Link>
                   <button
                     type="button"
                     onClick={() => respondFriend(p.id, "accept")}
@@ -528,15 +635,48 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {/* Outgoing requests */}
+        {outgoing.length > 0 && (
+          <div className="mb-5">
+            <div className="text-[11px] uppercase tracking-[0.15em] text-[var(--foreground-soft)] mb-2.5">
+              Отправленные запросы
+            </div>
+            <div className="space-y-2">
+              {outgoing.map((o) => (
+                <div
+                  key={o.id}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50/50 border border-amber-200/30"
+                >
+                  <Link href={`/user/${o.friend.username}`} className="w-9 h-9 rounded-lg bg-white flex items-center justify-center text-lg border border-[var(--border)] flex-shrink-0">
+                    {o.friend.image && o.friend.image.length <= 4 ? o.friend.image : <User size={16} className="text-[var(--foreground-soft)]" />}
+                  </Link>
+                  <Link href={`/user/${o.friend.username}`} className="flex-1 min-w-0 hover:underline">
+                    <div className="text-sm font-medium truncate">
+                      {o.friend.name || o.friend.username || "—"}
+                    </div>
+                    {o.friend.username && (
+                      <div className="text-xs text-[var(--foreground-muted)]">@{o.friend.username}</div>
+                    )}
+                  </Link>
+                  <span className="text-[10px] text-amber-600 bg-amber-100 px-2.5 py-1 rounded-lg flex items-center gap-1 flex-shrink-0">
+                    <Send size={10} /> Отправлено
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Friends list */}
         {friends.length > 0 ? (
           <div className="divide-y divide-[var(--border)]">
             {friends.map((f) => (
-              <div
+              <Link
                 key={f.id}
-                className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+                href={f.username ? `/user/${f.username}` : "#"}
+                className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:bg-[var(--surface-2)] -mx-2 px-2 rounded-xl transition-colors"
               >
-                <div className="w-9 h-9 rounded-lg bg-[var(--surface-2)] flex items-center justify-center text-lg border border-[var(--border)]">
+                <div className="w-9 h-9 rounded-lg bg-[var(--surface-2)] flex items-center justify-center text-lg border border-[var(--border)] flex-shrink-0">
                   {f.image && f.image.length <= 4 ? f.image : <User size={16} className="text-[var(--foreground-soft)]" />}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -547,7 +687,8 @@ export default function ProfilePage() {
                     <div className="text-xs text-[var(--foreground-muted)]">@{f.username}</div>
                   )}
                 </div>
-              </div>
+                <ArrowRight size={14} className="text-[var(--foreground-soft)] flex-shrink-0" />
+              </Link>
             ))}
           </div>
         ) : (

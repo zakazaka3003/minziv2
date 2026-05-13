@@ -27,11 +27,18 @@ export async function GET() {
     },
   });
 
+  const outgoing = await prisma.friendship.findMany({
+    where: { userId: session.user.id, status: "pending" },
+    include: {
+      friend: { select: { id: true, name: true, username: true, image: true } },
+    },
+  });
+
   const friendList = friends.map((f) =>
     f.userId === session.user!.id ? f.friend : f.user
   );
 
-  return Response.json({ friends: friendList, pending });
+  return Response.json({ friends: friendList, pending, outgoing });
 }
 
 export async function POST(req: Request) {
@@ -80,7 +87,15 @@ export async function POST(req: Request) {
     data: { userId: session.user.id, friendId: friend.id },
   });
 
-  return Response.json(friendship, { status: 201 });
+  return Response.json({
+    ...friendship,
+    friendPreview: {
+      id: friend.id,
+      name: friend.name,
+      username: friend.username,
+      image: friend.image,
+    },
+  }, { status: 201 });
 }
 
 export async function PATCH(req: Request) {

@@ -64,9 +64,20 @@ export default function GraphemesPage() {
     try {
       const analyzed = new hlRef.current.AnalyzedCharacter(strokesRef.current);
       matcherRef.current.match(analyzed, 12, (results: CharMatch[]) => {
-        setMatches(results);
-        if (results.length > 0) {
-          const top = results[0].character;
+        if (!results || results.length === 0) {
+          setMatches([]);
+          return;
+        }
+        const maxScore = results[0].score;
+        const normalized = results
+          .filter((r) => r.score > 0)
+          .map((r) => ({
+            character: r.character,
+            score: maxScore > 0 ? Math.min(r.score / maxScore, 1) : 0,
+          }));
+        setMatches(normalized);
+        if (normalized.length > 0) {
+          const top = normalized[0].character;
           const c = getChar(top);
           if (c) selectCharFn(top);
         }
