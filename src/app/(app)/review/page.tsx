@@ -13,6 +13,7 @@ import {
   Volume2, RotateCcw, Eye, ChevronRight, ChevronDown, Flame,
   BookOpen, PenTool, Brain, Zap, Star, CheckCircle, XCircle,
   ArrowRight, Trophy, Target, Clock, TrendingUp, SkipForward,
+  ThumbsUp, ThumbsDown, HelpCircle, Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -20,15 +21,19 @@ import { cn } from "@/lib/cn";
 
 type SessionPhase =
   | "idle"        // dashboard
-  | "writing"     // writing review with SRS
+  | "warmup"      // quick recognition swipes
   | "recognition" // multiple choice quiz
+  | "writing"     // writing review with HanziWriter
   | "context"     // fill-in-the-blank sentences
+  | "srs"         // SRS rating after writing+context
   | "summary";    // session results
 
 interface SessionStats {
   total: number;
   correct: number;
   written: number;
+  recognized: number;
+  contextCorrect: number;
   startTime: number;
 }
 
@@ -45,32 +50,34 @@ const speak = (text: string) => {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-const TIPS: Record<string, string> = {
-  "你": "Первая черта — слева сверху вниз чуть наклонно.",
-  "我": "Горизонтальная черта в середине пишется до вертикальной.",
-  "是": "Начинайте с горизонтальной черты сверху.",
-  "的": "Левая часть 白 пишется первой.",
-  "不": "Горизонтальная, затем вертикальная, затем откидная.",
-};
-
-function getRandomTip(hanzi: string): string {
-  if (TIPS[hanzi]) return TIPS[hanzi];
-  return "Соблюдайте порядок черт: сверху вниз, слева направо.";
-}
-
 function pluralDays(n: number): string {
   if (n === 1) return "день";
   if (n >= 2 && n <= 4) return "дня";
   return "дней";
 }
 
-/* Simple sentence templates for context review */
-const SENTENCE_TEMPLATES: { template: string; answer: string; hanzi: string }[] = [
-  { template: "___好", answer: "你", hanzi: "你" },
-  { template: "___是学生", answer: "我", hanzi: "我" },
-  { template: "这___一本书", answer: "是", hanzi: "是" },
-  { template: "___的名字", answer: "你", hanzi: "你" },
-  { template: "___不知道", answer: "我", hanzi: "我" },
+function pluralChars(n: number): string {
+  if (n % 10 === 1 && n % 100 !== 11) return "иероглиф";
+  if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return "иероглифа";
+  return "иероглифов";
+}
+
+/* Context sentence templates */
+const SENTENCE_DB: { template: string; answer: string; meaning: string }[] = [
+  { template: "___好", answer: "你", meaning: "Привет (ты + хорошо)" },
+  { template: "___是学生", answer: "我", meaning: "Я студент" },
+  { template: "这___一本书", answer: "是", meaning: "Это книга" },
+  { template: "___的名字", answer: "你", meaning: "Твоё имя" },
+  { template: "___不知道", answer: "我", meaning: "Я не знаю" },
+  { template: "___们好", answer: "你", meaning: "Здравствуйте (вы + хорошо)" },
+  { template: "___有一个朋友", answer: "我", meaning: "У меня есть друг" },
+  { template: "他___老师", answer: "是", meaning: "Он учитель" },
+  { template: "___叫什么", answer: "你", meaning: "Как тебя зовут" },
+  { template: "___很高兴", answer: "我", meaning: "Я очень рад" },
+  { template: "___认识你", answer: "很", meaning: "Очень рад знакомству" },
+  { template: "___会说中文", answer: "我", meaning: "Я умею говорить по-китайски" },
+  { template: "___想学习", answer: "我", meaning: "Я хочу учиться" },
+  { template: "今天天气___好", answer: "很", meaning: "Сегодня погода очень хорошая" },
 ];
 
 /* ─── Heatmap ───────────────────────────────────────────────────────── */
@@ -175,14 +182,101 @@ function WeakCharsList({ chars }: { chars: Record<string, CharProgress> }) {
   );
 }
 
-/* ─── SRS Outcome Buttons with Pandas ───────────────────────────────── */
+/* ─── Phase Progress Bar ────────────────────────────────────────────── */
 
-const SRS_BUTTONS: { id: Outcome; label: string; tag: string; sublabel: string; color: string; bgColor: string; pandaSrc: string }[] = [
-  { id: "again", label: "Снова", tag: "Повтор!", sublabel: "Очень сложно", color: "text-[var(--red-deep)]", bgColor: "bg-[var(--red-soft)] border-[var(--red)]/20", pandaSrc: "/panda/panda_head_sad.png" },
-  { id: "hard", label: "Трудно", tag: "Опять", sublabel: "Было сложно", color: "text-amber-800", bgColor: "bg-amber-50 border-amber-200", pandaSrc: "/panda/panda_head_neutral.png" },
-  { id: "good", label: "Хорошо", tag: "ок", sublabel: "Понял(а)", color: "text-[var(--green-deep)]", bgColor: "bg-[var(--green-soft)] border-[var(--green)]/20", pandaSrc: "/panda/panda_head_smile.png" },
-  { id: "easy", label: "Легко", tag: "Скоро", sublabel: "Очень легко", color: "text-[var(--green-deep)]", bgColor: "bg-[var(--bamboo-soft)] border-[var(--bamboo)]/20", pandaSrc: "/panda/panda_head_happy.png" },
-];
+const PHASE_LABELS: Record<string, string> = {
+  warmup: "Разминка",
+  recognition: "Узнавание",
+  writing: "Письмо",
+  context: "Контекст",
+  srs: "Оценка",
+};
+
+function PhaseProgress({ phase, phases }: { phase: SessionPhase; phases: SessionPhase[] }) {
+  const activePhases = phases.filter((p) => p !== "idle" && p !== "summary");
+  const currentIdx = activePhases.indexOf(phase as typeof activePhases[number]);
+
+  return (
+    <div className="flex items-center gap-1 mb-6">
+      {activePhases.map((p, i) => (
+        <div key={p} className="flex items-center gap-1 flex-1">
+          <div className="flex-1">
+            <div className="text-[10px] text-center mb-1 font-medium" style={{
+              color: i <= currentIdx ? "var(--green)" : "var(--foreground-soft)",
+            }}>
+              {PHASE_LABELS[p] || p}
+            </div>
+            <div
+              className={cn(
+                "h-1.5 rounded-full transition-all duration-500",
+                i < currentIdx ? "bg-[var(--green)]" :
+                i === currentIdx ? "bg-[var(--green)]" :
+                "bg-[var(--surface-3)]",
+              )}
+              style={{
+                opacity: i === currentIdx ? 0.7 : 1,
+              }}
+            />
+          </div>
+          {i < activePhases.length - 1 && (
+            <ChevronRight size={12} className="text-[var(--foreground-soft)] mt-3 shrink-0" />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Warmup Card ───────────────────────────────────────────────────── */
+
+function WarmupCard({
+  char,
+  onKnow,
+  onForgot,
+}: {
+  char: CharRecord;
+  onKnow: () => void;
+  onForgot: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-5 float-up">
+      <p className="text-sm text-[var(--foreground-muted)]">Знаете этот иероглиф?</p>
+
+      <div className="card p-8 flex flex-col items-center gap-4 min-w-[280px]">
+        <div className="flex items-center gap-3">
+          <span className="hanzi text-8xl leading-none">{char.hanzi}</span>
+          <button onClick={() => speak(char.hanzi)} className="btn btn-ghost h-9 w-9 p-0">
+            <Volume2 size={16} />
+          </button>
+        </div>
+        <span className="pinyin text-lg text-[var(--foreground-muted)]">{char.pinyin}</span>
+      </div>
+
+      <div className="flex gap-4 w-full max-w-sm">
+        <button
+          onClick={onForgot}
+          className="flex-1 rounded-[var(--radius-md)] border border-[var(--red)]/20 bg-[var(--red-soft)] px-6 py-4 flex flex-col items-center gap-2 hover:shadow-md active:scale-[0.98] transition-all"
+        >
+          <ThumbsDown size={24} className="text-[var(--red)]" />
+          <span className="font-medium text-[var(--red-deep)]">Не помню</span>
+        </button>
+        <button
+          onClick={onKnow}
+          className="flex-1 rounded-[var(--radius-md)] border border-[var(--green)]/20 bg-[var(--green-soft)] px-6 py-4 flex flex-col items-center gap-2 hover:shadow-md active:scale-[0.98] transition-all"
+        >
+          <ThumbsUp size={24} className="text-[var(--green)]" />
+          <span className="font-medium text-[var(--green-deep)]">Помню</span>
+        </button>
+      </div>
+
+      <div className="text-center mt-2">
+        <p className="text-xs text-[var(--foreground-soft)]">
+          {meaningRu(char) || char.meaningPrimary}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 /* ─── Recognition Quiz ──────────────────────────────────────────────── */
 
@@ -202,7 +296,7 @@ function RecognitionCard({
     if (chosen) return;
     setChosen(opt);
     const isCorrect = opt === correctAnswer;
-    setTimeout(() => onAnswer(isCorrect), 800);
+    setTimeout(() => onAnswer(isCorrect), 900);
   };
 
   return (
@@ -225,7 +319,7 @@ function RecognitionCard({
               onClick={() => handleChoice(opt)}
               disabled={chosen !== null}
               className={cn(
-                "rounded-[14px] border px-4 py-3.5 text-sm font-medium transition-all text-left",
+                "rounded-[var(--radius-md)] border px-4 py-3.5 text-sm font-medium transition-all text-left",
                 chosen === null && "hover:border-[var(--green)] hover:shadow-sm",
                 isChosen && isCorrect && "border-[var(--green)] bg-[var(--green-soft)] ring-2 ring-[var(--green)]",
                 isChosen && !isCorrect && "border-[var(--red)] bg-[var(--red-soft)] ring-2 ring-[var(--red)]",
@@ -255,45 +349,50 @@ function ContextCard({
 }) {
   const [chosen, setChosen] = useState<string | null>(null);
 
-  const { sentence, answer, distractors } = useMemo(() => {
-    const ruMeaning = meaningRu(char) || char.meaningPrimary;
-    const template = SENTENCE_TEMPLATES.find((t) => t.hanzi === char.hanzi);
+  const { sentence, answer, distractors, meaning } = useMemo(() => {
+    const template = SENTENCE_DB.find((t) => t.answer === char.hanzi);
     const sentenceText = template ? template.template : `___是好的`;
-    const correctAns = char.hanzi;
+    const correctAns = template ? template.answer : char.hanzi;
+    const sentenceMeaning = template ? template.meaning : "";
     const pool = allChars
-      .filter((c) => c.hanzi !== char.hanzi && c.level <= Math.max(char.level, 2))
+      .filter((c) => c.hanzi !== correctAns && c.level <= Math.max(char.level, 2))
       .sort(() => Math.random() - 0.5)
       .slice(0, 3)
       .map((c) => c.hanzi);
     const opts = [correctAns, ...pool].sort(() => Math.random() - 0.5);
-    return { sentence: sentenceText, answer: correctAns, distractors: opts };
+    return { sentence: sentenceText, answer: correctAns, distractors: opts, meaning: sentenceMeaning };
   }, [char, allChars]);
 
   const handleChoice = (opt: string) => {
     if (chosen) return;
     setChosen(opt);
-    setTimeout(() => onAnswer(opt === answer), 800);
+    setTimeout(() => onAnswer(opt === answer), 900);
   };
 
   return (
     <div className="flex flex-col items-center gap-6 float-up">
       <p className="text-sm text-[var(--foreground-muted)]">Вставьте нужный иероглиф</p>
-      <div className="hanzi text-4xl tracking-widest bg-white rounded-[18px] border border-[var(--border)] px-8 py-5">
-        {sentence.split("___").map((part, i, arr) => (
-          <span key={i}>
-            {part}
-            {i < arr.length - 1 && (
-              <span className={cn(
-                "inline-block w-12 border-b-2 mx-1 text-center",
-                chosen === answer ? "border-[var(--green)] text-[var(--green)]" :
-                chosen ? "border-[var(--red)] text-[var(--red)]" :
-                "border-[var(--border-strong)]"
-              )}>
-                {chosen || "\u00A0"}
-              </span>
-            )}
-          </span>
-        ))}
+      <div className="card p-6">
+        <div className="hanzi text-4xl tracking-widest text-center">
+          {sentence.split("___").map((part, i, arr) => (
+            <span key={i}>
+              {part}
+              {i < arr.length - 1 && (
+                <span className={cn(
+                  "inline-block w-12 border-b-2 mx-1 text-center",
+                  chosen === answer ? "border-[var(--green)] text-[var(--green)]" :
+                  chosen ? "border-[var(--red)] text-[var(--red)]" :
+                  "border-[var(--border-strong)]"
+                )}>
+                  {chosen || "\u00A0"}
+                </span>
+              )}
+            </span>
+          ))}
+        </div>
+        {meaning && (
+          <p className="text-xs text-[var(--foreground-muted)] text-center mt-3">{meaning}</p>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
         {distractors.map((opt) => {
@@ -305,7 +404,7 @@ function ContextCard({
               onClick={() => handleChoice(opt)}
               disabled={chosen !== null}
               className={cn(
-                "hanzi text-3xl rounded-[14px] border px-6 py-4 transition-all",
+                "hanzi text-3xl rounded-[var(--radius-md)] border px-6 py-4 transition-all",
                 chosen === null && "hover:border-[var(--green)] hover:shadow-sm",
                 isChosen && isCorrect && "border-[var(--green)] bg-[var(--green-soft)] ring-2 ring-[var(--green)]",
                 isChosen && !isCorrect && "border-[var(--red)] bg-[var(--red-soft)] ring-2 ring-[var(--red)]",
@@ -322,53 +421,118 @@ function ContextCard({
   );
 }
 
+/* ─── SRS Outcome Buttons ───────────────────────────────────────────── */
+
+const SRS_BUTTONS: { id: Outcome; label: string; sublabel: string; color: string; bgColor: string; pandaSrc: string }[] = [
+  { id: "again", label: "Снова", sublabel: "Повторить сейчас", color: "text-[var(--red-deep)]", bgColor: "bg-[var(--red-soft)] border-[var(--red)]/20", pandaSrc: "/panda/panda_head_sad.png" },
+  { id: "hard", label: "Трудно", sublabel: "Через 1 день", color: "text-amber-800", bgColor: "bg-amber-50 border-amber-200", pandaSrc: "/panda/panda_head_neutral.png" },
+  { id: "good", label: "Хорошо", sublabel: "Через 3 дня", color: "text-[var(--green-deep)]", bgColor: "bg-[var(--green-soft)] border-[var(--green)]/20", pandaSrc: "/panda/panda_head_smile.png" },
+  { id: "easy", label: "Легко", sublabel: "Через неделю", color: "text-[var(--green-deep)]", bgColor: "bg-[var(--bamboo-soft)] border-[var(--bamboo)]/20", pandaSrc: "/panda/panda_head_happy.png" },
+];
+
+function SRSButtons({ char, onOutcome }: { char: CharRecord; onOutcome: (o: Outcome) => void }) {
+  return (
+    <div className="flex flex-col items-center gap-5 float-up">
+      <Panda mood="studying" size={100} />
+      <h3 className="text-lg font-display font-medium">Как прошло?</h3>
+      <p className="text-sm text-[var(--foreground-muted)] text-center max-w-sm">
+        Оцените, насколько легко вы вспомнили <span className="hanzi text-base">{char.hanzi}</span> ({meaningRu(char) || char.meaningPrimary})
+      </p>
+
+      <div className="grid grid-cols-4 gap-3 w-full max-w-lg mt-2">
+        {SRS_BUTTONS.map(({ id, label, sublabel, color, bgColor, pandaSrc }) => (
+          <button
+            key={id}
+            onClick={() => onOutcome(id)}
+            className={cn(
+              "rounded-[var(--radius-lg)] border px-3 py-5 flex flex-col items-center gap-2 transition-all hover:shadow-md active:scale-[0.97]",
+              bgColor, color,
+            )}
+          >
+            <Image src={pandaSrc} alt={label} width={48} height={48} className="select-none" />
+            <span className="font-semibold text-sm">{label}</span>
+            <span className="text-[10px] opacity-60 text-center leading-tight">{sublabel}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Summary Screen ────────────────────────────────────────────────── */
 
 function SummaryScreen({
   stats,
   streak,
+  weakChars,
   onClose,
 }: {
   stats: SessionStats;
   streak: number;
+  weakChars: string[];
   onClose: () => void;
 }) {
   const accuracy = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
-  const timeMin = Math.round((Date.now() - stats.startTime) / 60000);
+  const timeMin = Math.max(1, Math.round((Date.now() - stats.startTime) / 60000));
+  const pandaMood = accuracy >= 80 ? "success" : accuracy >= 50 ? "practicing" : "tryagain";
+  const title = accuracy >= 80 ? "Отличная работа!" : accuracy >= 50 ? "Хорошая тренировка!" : "Продолжайте практику!";
 
   return (
-    <div className="flex flex-col items-center gap-6 py-8 float-up">
-      <Panda mood="success" size={140} />
-      <h2 className="text-2xl font-display font-medium">Отличная работа!</h2>
-      <p className="text-[var(--foreground-muted)]">Постоянство — ключ к успеху.</p>
+    <div className="flex flex-col items-center gap-6 py-8 float-up max-w-lg mx-auto">
+      <Panda mood={pandaMood} size={140} />
+      <h2 className="text-2xl font-display font-medium">{title}</h2>
+      <p className="text-[var(--foreground-muted)] text-center">
+        {accuracy >= 80 ? "Постоянство  — ключ к запоминанию." : "Каждая тренировка делает вас сильнее."}
+      </p>
 
-      <div className="grid grid-cols-3 gap-4 w-full max-w-md">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
         <div className="card-soft p-4 text-center">
-          <div className="text-2xl font-bold text-[var(--green)]">{stats.total}</div>
+          <div className="text-2xl font-bold text-[var(--green)] tabular-nums">{stats.total}</div>
           <div className="text-xs text-[var(--foreground-muted)] mt-1">повторено</div>
         </div>
         <div className="card-soft p-4 text-center">
-          <div className="text-2xl font-bold text-[var(--green)]">{accuracy}%</div>
+          <div className="text-2xl font-bold text-[var(--green)] tabular-nums">{accuracy}%</div>
           <div className="text-xs text-[var(--foreground-muted)] mt-1">точность</div>
         </div>
         <div className="card-soft p-4 text-center">
-          <div className="text-2xl font-bold text-amber-600">{timeMin}</div>
+          <div className="text-2xl font-bold text-[var(--bamboo)] tabular-nums">{stats.written}</div>
+          <div className="text-xs text-[var(--foreground-muted)] mt-1">написано</div>
+        </div>
+        <div className="card-soft p-4 text-center">
+          <div className="text-2xl font-bold text-amber-600 tabular-nums">{timeMin}</div>
           <div className="text-xs text-[var(--foreground-muted)] mt-1">мин</div>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 mt-2">
-        <div className="streak-pill">
-          <span>🔥</span>
-          <span>{streak} {pluralDays(streak)} подряд</span>
+      {streak > 0 && (
+        <div className="flex items-center gap-3 mt-1">
+          <div className="streak-pill">
+            <Flame size={16} className="text-amber-500" />
+            <span>{streak} {pluralDays(streak)} подряд</span>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="flex gap-3 mt-4">
-        <button onClick={onClose} className="btn btn-success">
-          Готово
-        </button>
-      </div>
+      {weakChars.length > 0 && (
+        <div className="w-full card-soft p-4">
+          <p className="text-sm font-medium mb-2 text-[var(--red-deep)]">Требуют внимания:</p>
+          <div className="flex gap-2 flex-wrap">
+            {weakChars.map((h) => {
+              const c = getChar(h);
+              return (
+                <div key={h} className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--red-soft)] px-3 py-1.5">
+                  <span className="hanzi text-lg">{h}</span>
+                  {c && <span className="text-xs text-[var(--foreground-muted)]">{meaningShort(c)}</span>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <button onClick={onClose} className="btn btn-success mt-2">
+        Готово
+      </button>
     </div>
   );
 }
@@ -387,13 +551,15 @@ export default function ReviewPage() {
   const [phase, setPhase] = useState<SessionPhase>("idle");
   const [queue, setQueue] = useState<string[]>([]);
   const [queueIdx, setQueueIdx] = useState(0);
-  const [subPhase, setSubPhase] = useState<"writing" | "recognition" | "context">("writing");
   const [writingDone, setWritingDone] = useState(false);
-  const [showTip, setShowTip] = useState(true);
-  const [sessionStats, setSessionStats] = useState<SessionStats>({ total: 0, correct: 0, written: 0, startTime: Date.now() });
+  const [showTip, setShowTip] = useState(false);
   const [showStrokeOrder, setShowStrokeOrder] = useState(false);
+  const [sessionStats, setSessionStats] = useState<SessionStats>({
+    total: 0, correct: 0, written: 0, recognized: 0, contextCorrect: 0, startTime: Date.now(),
+  });
+  const [weakThisSession, setWeakThisSession] = useState<string[]>([]);
 
-  /* Dashboard stats */
+  /* Dashboard stats — always computed */
   const dueCnt = useMemo(() => dueChars(chars).length, [chars]);
   const weakCnt = useMemo(() => Object.values(chars).filter((c) => c.status === "weak" || c.lapses >= 2).length, [chars]);
   const todayEntry = useMemo(() => {
@@ -401,11 +567,9 @@ export default function ReviewPage() {
     return daily.find((e) => e.date === t);
   }, [daily]);
   const todayReviewed = todayEntry?.reviewed ?? 0;
-  const todayCorrect = todayEntry?.correct ?? 0;
-  const todayTotal = todayEntry?.total ?? 0;
   const hasAnyStudied = Object.keys(chars).length > 0;
 
-  /* Mini bar chart for sidebar */
+  /* Mini bar chart data */
   const todayBars = useMemo(() => {
     const last7 = daily.slice(-7);
     const maxR = Math.max(1, ...last7.map((d) => d.reviewed));
@@ -432,6 +596,9 @@ export default function ReviewPage() {
     return [correct, ...pool].sort(() => Math.random() - 0.5);
   }, [currentChar]);
 
+  /* Session phase sequence */
+  const sessionPhases: SessionPhase[] = ["warmup", "recognition", "writing", "context", "srs"];
+
   /* Start review session */
   const startSession = useCallback((mode: "all" | "weak" | "writing") => {
     let q: string[];
@@ -445,38 +612,54 @@ export default function ReviewPage() {
     }
     if (q.length === 0) return;
 
-    // Shuffle for variety, limit to 18 per session
-    const shuffled = q.sort(() => Math.random() - 0.5).slice(0, 18);
+    const shuffled = q.sort(() => Math.random() - 0.5).slice(0, 15);
     setQueue(shuffled);
     setQueueIdx(0);
-    setSubPhase("writing");
     setWritingDone(false);
     setShowStrokeOrder(false);
-    setSessionStats({ total: 0, correct: 0, written: 0, startTime: Date.now() });
-    setPhase("writing");
+    setShowTip(false);
+    setWeakThisSession([]);
+    setSessionStats({ total: 0, correct: 0, written: 0, recognized: 0, contextCorrect: 0, startTime: Date.now() });
+    setPhase("warmup");
   }, [chars]);
 
-  /* Advance to next character or phase */
+  /* Advance to next character within current phase, or move to next phase */
+  const advanceInPhase = useCallback(() => {
+    const nextIdx = queueIdx + 1;
+    if (nextIdx >= queue.length) {
+      // Move to next session phase
+      const phaseOrder: SessionPhase[] = ["warmup", "recognition", "writing", "context", "srs"];
+      const currentPhaseIdx = phaseOrder.indexOf(phase);
+      if (currentPhaseIdx < phaseOrder.length - 1) {
+        const nextPhase = phaseOrder[currentPhaseIdx + 1];
+        setQueueIdx(0);
+        setWritingDone(false);
+        setShowStrokeOrder(false);
+        setPhase(nextPhase);
+      } else {
+        setPhase("summary");
+      }
+    } else {
+      setQueueIdx(nextIdx);
+      setWritingDone(false);
+      setShowStrokeOrder(false);
+    }
+  }, [queueIdx, queue.length, phase]);
+
+  /* Handle SRS outcome (final step per character) */
   const handleSRSOutcome = useCallback((outcome: Outcome) => {
     if (!currentHanzi) return;
     recordOutcome(currentHanzi, outcome);
+    if (outcome === "again") {
+      setWeakThisSession((prev) => prev.includes(currentHanzi) ? prev : [...prev, currentHanzi]);
+    }
     setSessionStats((s) => ({
       ...s,
       total: s.total + 1,
       correct: outcome !== "again" ? s.correct + 1 : s.correct,
-      written: s.written + 1,
     }));
-
-    const nextIdx = queueIdx + 1;
-    if (nextIdx >= queue.length) {
-      setPhase("summary");
-    } else {
-      setQueueIdx(nextIdx);
-      setSubPhase("writing");
-      setWritingDone(false);
-      setShowStrokeOrder(false);
-    }
-  }, [currentHanzi, queueIdx, queue.length, recordOutcome]);
+    advanceInPhase();
+  }, [currentHanzi, recordOutcome, advanceInPhase]);
 
   /* ─── Empty state ─────────────────────────────────────────────────── */
   if (!hasAnyStudied) {
@@ -496,7 +679,7 @@ export default function ReviewPage() {
   if (phase === "summary") {
     return (
       <div className="max-w-2xl mx-auto px-4 sm:px-8 py-8">
-        <SummaryScreen stats={sessionStats} streak={streak} onClose={() => setPhase("idle")} />
+        <SummaryScreen stats={sessionStats} streak={streak} weakChars={weakThisSession} onClose={() => setPhase("idle")} />
       </div>
     );
   }
@@ -504,7 +687,6 @@ export default function ReviewPage() {
   /* ─── Right sidebar (shared between session & dashboard) ──────────── */
   const rightSidebar = (
     <div className="space-y-5 hidden lg:block">
-      {/* Today stats */}
       <Card className="p-5">
         <h3 className="font-medium mb-4">Сегодня</h3>
         <div className="grid grid-cols-2 gap-3 mb-4">
@@ -521,7 +703,6 @@ export default function ReviewPage() {
           <Clock size={14} className="text-[var(--foreground-muted)]" />
           <span className="text-sm text-[var(--foreground-muted)]">{Math.max(1, Math.round(todayReviewed * 0.7))} мин потрачено</span>
         </div>
-        {/* Mini bar chart */}
         <div className="flex items-end gap-1 h-12 mt-3">
           {todayBars.map((bar, i) => (
             <div
@@ -534,30 +715,27 @@ export default function ReviewPage() {
         </div>
       </Card>
 
-      {/* Weak characters */}
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-medium">Слабые иероглифы</h3>
           {weakCnt > 0 && (
             <button onClick={() => startSession("weak")} className="text-xs text-[var(--green)] font-medium hover:underline">
-              Смотреть все
+              Тренировать
             </button>
           )}
         </div>
         <WeakCharsList chars={chars} />
       </Card>
 
-      {/* Heatmap */}
       <Card className="p-5">
         <h3 className="font-medium mb-3">Календарь повторений</h3>
         <ReviewHeatmap daily={daily} />
       </Card>
 
-      {/* Motivational card */}
       <div className="rounded-[var(--radius-lg)] overflow-hidden relative bg-gradient-to-br from-[var(--green-soft)] to-[var(--bamboo-soft)] p-5">
         <div className="flex items-start gap-3">
           <div className="flex-1">
-            <h3 className="font-semibold text-[var(--green-deep)] mb-1">Отличная работа!</h3>
+            <h3 className="font-semibold text-[var(--green-deep)] mb-1">Продолжайте!</h3>
             <p className="text-xs text-[var(--green-deep)] opacity-80">Постоянство — ключ к успеху.</p>
           </div>
           <Panda mood="practicing" size={80} />
@@ -571,13 +749,18 @@ export default function ReviewPage() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
         {/* Header */}
-        <h1 className="text-3xl font-display font-semibold mb-1 text-[var(--ink)]">Повторение</h1>
+        <div className="flex items-center justify-between mb-1">
+          <h1 className="text-3xl font-display font-semibold text-[var(--ink)]">Повторение</h1>
+          <button onClick={() => setPhase("summary")} className="btn btn-ghost text-sm py-1.5 px-3 flex items-center gap-1">
+            Завершить <SkipForward size={14} />
+          </button>
+        </div>
         <p className="text-sm text-[var(--foreground-muted)] mb-1">Сегодняшняя цель</p>
         <div className="flex items-end gap-3 mb-2">
           <span className="text-4xl font-bold text-[var(--green)] leading-none tabular-nums">{todayReviewed}</span>
           <span className="text-base text-[var(--foreground-muted)] pb-0.5">/ 30 мин</span>
         </div>
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-4 mb-4">
           <div className="flex-1 h-2.5 rounded-full bg-[var(--surface-3)] overflow-hidden max-w-lg">
             <div
               className="h-full rounded-full bg-[var(--green)] transition-[width] duration-500"
@@ -586,155 +769,207 @@ export default function ReviewPage() {
           </div>
           {streak > 0 && (
             <div className="streak-pill">
-              <span>🔥</span>
+              <Flame size={14} className="text-amber-500" />
               <span>{streak} {pluralDays(streak)} подряд</span>
             </div>
           )}
         </div>
 
+        {/* Phase progress bar */}
+        <PhaseProgress phase={phase} phases={sessionPhases} />
+
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
-          {/* ─── Main session content ──────────────────────────────── */}
           <div>
             {/* Session progress row */}
             <div className="flex items-center gap-3 mb-5">
-              <PenTool size={16} className="text-[var(--foreground-muted)]" />
-              <span className="text-sm font-medium">Письменное повторение</span>
+              {phase === "warmup" && <Brain size={16} className="text-[var(--foreground-muted)]" />}
+              {phase === "recognition" && <HelpCircle size={16} className="text-[var(--foreground-muted)]" />}
+              {phase === "writing" && <PenTool size={16} className="text-[var(--foreground-muted)]" />}
+              {phase === "context" && <BookOpen size={16} className="text-[var(--foreground-muted)]" />}
+              {phase === "srs" && <Star size={16} className="text-[var(--foreground-muted)]" />}
+              <span className="text-sm font-medium">{PHASE_LABELS[phase]}</span>
               <span className="text-sm tabular-nums text-[var(--foreground-muted)]">{queueIdx + 1} / {queue.length}</span>
               <div className="flex-1" />
-              <button onClick={() => setPhase("summary")} className="btn btn-ghost text-sm py-1.5 px-3 flex items-center gap-1">
-                Пропустить <SkipForward size={14} />
+              <button
+                onClick={advanceInPhase}
+                className="btn btn-ghost text-sm py-1.5 px-3 flex items-center gap-1"
+              >
+                Далее <ChevronRight size={14} />
               </button>
             </div>
 
-            {/* Character info + Writing canvas — 2 columns */}
-            <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
-              {/* Left: character info */}
-              <div className="card p-5 flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <button onClick={() => speak(currentChar.hanzi)} className="btn btn-ghost h-9 w-9 p-0">
-                    <Volume2 size={18} />
-                  </button>
-                  <span className="pinyin text-xl">{currentChar.pinyin}</span>
-                </div>
+            {/* ─── WARMUP PHASE ─── */}
+            {phase === "warmup" && (
+              <WarmupCard
+                char={currentChar}
+                onKnow={() => {
+                  setSessionStats((s) => ({ ...s, recognized: s.recognized + 1 }));
+                  advanceInPhase();
+                }}
+                onForgot={() => {
+                  setWeakThisSession((prev) =>
+                    prev.includes(currentChar.hanzi) ? prev : [...prev, currentChar.hanzi]
+                  );
+                  advanceInPhase();
+                }}
+              />
+            )}
 
-                <div className="hanzi text-8xl text-center leading-none py-4">{currentChar.hanzi}</div>
-                <div className="text-center text-lg font-medium">{meaningRu(currentChar) || currentChar.meaningPrimary}</div>
+            {/* ─── RECOGNITION PHASE ─── */}
+            {phase === "recognition" && (
+              <RecognitionCard
+                key={`rec-${currentHanzi}-${queueIdx}`}
+                char={currentChar}
+                options={quizOptions}
+                onAnswer={(correct) => {
+                  setSessionStats((s) => ({
+                    ...s,
+                    recognized: s.recognized + (correct ? 1 : 0),
+                  }));
+                  if (!correct) {
+                    setWeakThisSession((prev) =>
+                      prev.includes(currentChar.hanzi) ? prev : [...prev, currentChar.hanzi]
+                    );
+                  }
+                  setTimeout(() => advanceInPhase(), 200);
+                }}
+              />
+            )}
 
-                {currentChar.components && currentChar.components.length > 0 && (
-                  <div>
-                    <p className="text-xs text-[var(--foreground-muted)] mb-1.5">Состоит из:</p>
-                    <div className="flex items-center gap-2 justify-center">
-                      {currentChar.components.map((comp, i) => (
-                        <span key={i} className="flex items-center gap-2">
-                          {i > 0 && <span className="text-[var(--foreground-soft)]">+</span>}
-                          <span className="hanzi text-2xl card-soft px-3 py-1.5">{comp}</span>
-                        </span>
-                      ))}
+            {/* ─── WRITING PHASE ─── */}
+            {phase === "writing" && (
+              <div className="float-up">
+                <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6">
+                  {/* Left: character info */}
+                  <div className="card p-5 flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => speak(currentChar.hanzi)} className="btn btn-ghost h-9 w-9 p-0">
+                        <Volume2 size={18} />
+                      </button>
+                      <span className="pinyin text-xl">{currentChar.pinyin}</span>
                     </div>
-                  </div>
-                )}
+                    <div className="hanzi text-7xl text-center leading-none py-3">{currentChar.hanzi}</div>
+                    <div className="text-center text-base font-medium">{meaningRu(currentChar) || currentChar.meaningPrimary}</div>
 
-                <div>
-                  <p className="text-xs text-[var(--foreground-muted)] mb-1">Примеры:</p>
-                  <div className="flex gap-3 hanzi text-xl text-[var(--foreground-muted)]">
-                    {ALL_CHARACTERS
-                      .filter((c) => c.hanzi !== currentChar.hanzi && c.hanzi.includes(currentChar.hanzi))
-                      .slice(0, 3)
-                      .map((c) => (
-                        <span key={c.hanzi}>{c.hanzi}</span>
-                      ))}
-                    {currentChar.hanzi === "你" && <><span>你好</span><span>你们</span><span>你是</span></>}
-                    {currentChar.hanzi === "我" && <><span>我们</span><span>我的</span></>}
-                    {currentChar.hanzi === "是" && <><span>是的</span><span>不是</span></>}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: writing canvas + actions */}
-              <div className="flex flex-col items-center gap-4">
-                <p className="text-sm text-[var(--foreground-muted)]">
-                  Напишите иероглиф. Соблюдайте порядок черт.
-                </p>
-
-                <div className="flex items-start gap-4">
-                  <div className="relative">
-                    {showStrokeOrder ? (
-                      <div className="rounded-[18px] border border-[var(--border)] bg-white overflow-hidden" style={{ width: 324, height: 324, padding: 12 }}>
-                        <StrokeAnimation hanzi={currentChar.hanzi} size={300} autoplay />
+                    {currentChar.components && currentChar.components.length > 0 && (
+                      <div>
+                        <p className="text-xs text-[var(--foreground-muted)] mb-1.5">Состав:</p>
+                        <div className="flex items-center gap-2 justify-center">
+                          {currentChar.components.map((comp, i) => (
+                            <span key={i} className="flex items-center gap-2">
+                              {i > 0 && <span className="text-[var(--foreground-soft)]">+</span>}
+                              <span className="hanzi text-xl card-soft px-2.5 py-1">{comp}</span>
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    ) : (
-                      <WritingQuiz
-                        key={`${currentHanzi}-${queueIdx}`}
-                        hanzi={currentChar.hanzi}
-                        size={300}
-                        showOutline
-                        hideInitialFeedback
-                        onComplete={() => {
-                          setWritingDone(true);
-                          setSessionStats((s) => ({ ...s, written: s.written + 1 }));
-                        }}
-                      />
                     )}
                   </div>
 
-                  {/* Side buttons */}
-                  <div className="flex flex-col gap-3">
-                    <button
-                      onClick={() => { setShowStrokeOrder(false); setWritingDone(false); }}
-                      className="card-soft w-14 h-14 flex flex-col items-center justify-center gap-0.5 hover:bg-[var(--surface-2)] transition-colors"
-                      title="Заново"
-                    >
-                      <RotateCcw size={20} className="text-[var(--foreground-muted)]" />
-                      <span className="text-[10px] text-[var(--foreground-muted)]">Заново</span>
-                    </button>
-                    <button
-                      onClick={() => setShowStrokeOrder(!showStrokeOrder)}
-                      className="card-soft w-14 h-14 flex flex-col items-center justify-center gap-0.5 hover:bg-[var(--surface-2)] transition-colors"
-                      title="Показать порядок"
-                    >
-                      <Eye size={20} className="text-[var(--foreground-muted)]" />
-                      <span className="text-[10px] text-[var(--foreground-muted)] leading-tight text-center">Показать порядок</span>
-                    </button>
+                  {/* Right: writing canvas + actions */}
+                  <div className="flex flex-col items-center gap-4">
+                    <p className="text-sm text-[var(--foreground-muted)]">
+                      Напишите иероглиф. Соблюдайте порядок черт.
+                    </p>
+
+                    <div className="flex items-start gap-4">
+                      <div className="relative">
+                        {showStrokeOrder ? (
+                          <div className="rounded-[18px] border border-[var(--border)] bg-white overflow-hidden" style={{ width: 324, height: 324, padding: 12 }}>
+                            <StrokeAnimation hanzi={currentChar.hanzi} size={300} autoplay />
+                          </div>
+                        ) : (
+                          <WritingQuiz
+                            key={`${currentHanzi}-${queueIdx}`}
+                            hanzi={currentChar.hanzi}
+                            size={300}
+                            showOutline
+                            hideInitialFeedback
+                            onComplete={() => {
+                              setWritingDone(true);
+                              setSessionStats((s) => ({ ...s, written: s.written + 1 }));
+                            }}
+                          />
+                        )}
+                      </div>
+
+                      {/* Side buttons */}
+                      <div className="flex flex-col gap-3">
+                        <button
+                          onClick={() => { setShowStrokeOrder(false); setWritingDone(false); }}
+                          className="card-soft w-14 h-14 flex flex-col items-center justify-center gap-0.5 hover:bg-[var(--surface-2)] transition-colors"
+                          title="Заново"
+                        >
+                          <RotateCcw size={20} className="text-[var(--foreground-muted)]" />
+                          <span className="text-[10px] text-[var(--foreground-muted)]">Заново</span>
+                        </button>
+                        <button
+                          onClick={() => setShowStrokeOrder(!showStrokeOrder)}
+                          className="card-soft w-14 h-14 flex flex-col items-center justify-center gap-0.5 hover:bg-[var(--surface-2)] transition-colors"
+                          title="Показать порядок"
+                        >
+                          <Eye size={20} className="text-[var(--foreground-muted)]" />
+                          <span className="text-[10px] text-[var(--foreground-muted)] leading-tight text-center">Порядок</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Continue button after writing is done */}
+                    {writingDone && (
+                      <button
+                        onClick={advanceInPhase}
+                        className="btn btn-success mt-2 flex items-center gap-2"
+                      >
+                        Далее <ArrowRight size={16} />
+                      </button>
+                    )}
+
+                    {/* Tip section */}
+                    <div className="w-full mt-2">
+                      <button
+                        onClick={() => setShowTip(!showTip)}
+                        className="flex items-center gap-2 text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors w-full"
+                      >
+                        <Lightbulb size={16} className="text-[var(--foreground-muted)]" />
+                        <span className="font-medium text-[var(--green-deep)]">Совет</span>
+                        <ChevronDown size={14} className={cn("transition-transform ml-auto", showTip && "rotate-180")} />
+                      </button>
+                      {showTip && (
+                        <div className="mt-2 text-sm text-[var(--foreground-muted)] pl-7">
+                          Соблюдайте порядок черт: сверху вниз, слева направо.
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                {/* SRS Buttons with Pandas */}
-                <div className="grid grid-cols-4 gap-3 w-full mt-2">
-                  {SRS_BUTTONS.map(({ id, label, tag, sublabel, color, bgColor, pandaSrc }) => (
-                    <button
-                      key={id}
-                      onClick={() => handleSRSOutcome(id)}
-                      className={cn(
-                        "rounded-[18px] border px-3 py-4 flex flex-col items-center gap-1.5 transition-all hover:shadow-md active:scale-[0.98]",
-                        bgColor, color,
-                      )}
-                    >
-                      <span className="text-[10px] font-medium opacity-60">{tag}</span>
-                      <Image src={pandaSrc} alt={label} width={44} height={44} className="select-none" />
-                      <span className="font-semibold text-sm">{label}</span>
-                      <span className="text-[11px] opacity-60">{sublabel}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Tip section */}
-                <div className="w-full">
-                  <button
-                    onClick={() => setShowTip(!showTip)}
-                    className="flex items-center gap-2 text-sm text-[var(--foreground-muted)] hover:text-[var(--foreground)] transition-colors w-full"
-                  >
-                    <Target size={16} className="text-[var(--foreground-muted)]" />
-                    <span className="font-medium text-[var(--green-deep)]">Совет</span>
-                    <ChevronDown size={14} className={cn("transition-transform ml-auto", showTip && "rotate-180")} />
-                  </button>
-                  {showTip && (
-                    <div className="mt-2 text-sm text-[var(--foreground-muted)] pl-7">
-                      {getRandomTip(currentChar.hanzi)}
-                    </div>
-                  )}
-                </div>
               </div>
-            </div>
+            )}
+
+            {/* ─── CONTEXT PHASE ─── */}
+            {phase === "context" && (
+              <ContextCard
+                key={`ctx-${currentHanzi}-${queueIdx}`}
+                char={currentChar}
+                allChars={ALL_CHARACTERS}
+                onAnswer={(correct) => {
+                  setSessionStats((s) => ({
+                    ...s,
+                    contextCorrect: s.contextCorrect + (correct ? 1 : 0),
+                  }));
+                  if (!correct) {
+                    setWeakThisSession((prev) =>
+                      prev.includes(currentChar.hanzi) ? prev : [...prev, currentChar.hanzi]
+                    );
+                  }
+                  setTimeout(() => advanceInPhase(), 200);
+                }}
+              />
+            )}
+
+            {/* ─── SRS PHASE ─── */}
+            {phase === "srs" && (
+              <SRSButtons char={currentChar} onOutcome={handleSRSOutcome} />
+            )}
           </div>
 
           {/* Right sidebar — always visible during session */}
@@ -750,7 +985,6 @@ export default function ReviewPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
-      {/* Page title + daily goal — reference style */}
       <h1 className="text-3xl font-display font-semibold mb-2 text-[var(--ink)]">Повторение</h1>
       <p className="text-sm text-[var(--foreground-muted)] mb-1">Сегодняшняя цель</p>
       <div className="flex items-end gap-3 mb-2">
@@ -768,18 +1002,16 @@ export default function ReviewPage() {
         </div>
         {streak > 0 && (
           <div className="streak-pill">
-            <span>🔥</span>
+            <Flame size={14} className="text-amber-500" />
             <span>{streak} {pluralDays(streak)} подряд</span>
           </div>
         )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
-        {/* ─── Main content ─────────────────────────────────────────── */}
         <div className="space-y-6">
           {/* Session cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Due today */}
             <button
               onClick={() => startSession("all")}
               disabled={dueCnt === 0}
@@ -797,7 +1029,6 @@ export default function ReviewPage() {
               )}
             </button>
 
-            {/* Weak characters */}
             <button
               onClick={() => startSession("weak")}
               disabled={weakCnt === 0}
@@ -815,7 +1046,6 @@ export default function ReviewPage() {
               )}
             </button>
 
-            {/* Writing practice */}
             <button
               onClick={() => startSession("writing")}
               disabled={dueCnt === 0}
@@ -825,7 +1055,7 @@ export default function ReviewPage() {
                 <PenTool size={22} className="text-blue-500" />
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-blue-500">{Math.min(dueCnt, 18)}</div>
+                <div className="text-3xl font-bold text-blue-500">{Math.min(dueCnt, 15)}</div>
                 <div className="text-sm text-[var(--foreground-muted)]">письмо</div>
               </div>
               {dueCnt > 0 && (
@@ -839,7 +1069,7 @@ export default function ReviewPage() {
             <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-display font-medium">Готово к повторению</h2>
-                <span className="text-sm text-[var(--foreground-muted)]">{dueCnt} иероглифов</span>
+                <span className="text-sm text-[var(--foreground-muted)]">{dueCnt} {pluralChars(dueCnt)}</span>
               </div>
               <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
                 {dueChars(chars).slice(0, 24).map((cp) => {
@@ -876,7 +1106,6 @@ export default function ReviewPage() {
           )}
         </div>
 
-        {/* ─── Right sidebar ────────────────────────────────────────── */}
         {rightSidebar}
       </div>
     </div>
