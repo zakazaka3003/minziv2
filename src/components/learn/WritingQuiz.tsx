@@ -9,6 +9,7 @@ interface Props {
   size?: number;
   className?: string;
   showOutline?: boolean;
+  hideInitialFeedback?: boolean;
   onMistake?: () => void;
   onCorrectStroke?: (i: number, total: number) => void;
   onComplete?: (info: { totalMistakes: number; totalStrokes: number }) => void;
@@ -34,6 +35,7 @@ export function WritingQuiz({
   size = 300,
   className,
   showOutline = true,
+  hideInitialFeedback = false,
   onMistake,
   onCorrectStroke,
   onComplete,
@@ -44,7 +46,7 @@ export function WritingQuiz({
   const [totalStrokes, setTotalStrokes] = useState(0);
   const [feedback, setFeedback] = useState<
     null | { tone: "ok" | "warn" | "info"; text: string }
-  >({ tone: "info", text: showOutline ? "Пишите по образцу — система проверит порядок и направление черт." : "Напишите иероглиф по памяти. Система проверит порядок и направление черт." });
+  >(hideInitialFeedback ? null : { tone: "info", text: showOutline ? "Пишите по образцу — система проверит порядок и направление черт." : "Напишите иероглиф по памяти. Система проверит порядок и направление черт." });
 
   const onCompleteRef = useRef(onComplete);
   const onMistakeRef = useRef(onMistake);

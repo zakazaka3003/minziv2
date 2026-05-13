@@ -12,7 +12,7 @@ import { StrokeAnimation } from "@/components/learn/StrokeAnimation";
 import {
   Volume2, RotateCcw, Eye, ChevronRight, ChevronDown, Flame,
   BookOpen, PenTool, Brain, Zap, Star, CheckCircle, XCircle,
-  ArrowRight, Trophy, Target, Clock, TrendingUp,
+  ArrowRight, Trophy, Target, Clock, TrendingUp, SkipForward,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -601,8 +601,8 @@ export default function ReviewPage() {
               <span className="text-sm font-medium">Письменное повторение</span>
               <span className="text-sm tabular-nums text-[var(--foreground-muted)]">{queueIdx + 1} / {queue.length}</span>
               <div className="flex-1" />
-              <button onClick={() => setPhase("summary")} className="btn btn-ghost text-sm py-1.5 px-3">
-                Пропустить ⏭
+              <button onClick={() => setPhase("summary")} className="btn btn-ghost text-sm py-1.5 px-3 flex items-center gap-1">
+                Пропустить <SkipForward size={14} />
               </button>
             </div>
 
@@ -668,6 +668,7 @@ export default function ReviewPage() {
                         hanzi={currentChar.hanzi}
                         size={300}
                         showOutline
+                        hideInitialFeedback
                         onComplete={() => {
                           setWritingDone(true);
                           setSessionStats((s) => ({ ...s, written: s.written + 1 }));
@@ -692,7 +693,7 @@ export default function ReviewPage() {
                       title="Показать порядок"
                     >
                       <Eye size={20} className="text-[var(--foreground-muted)]" />
-                      <span className="text-[10px] text-[var(--foreground-muted)] leading-tight text-center">Показать<br/>порядок</span>
+                      <span className="text-[10px] text-[var(--foreground-muted)] leading-tight text-center">Показать порядок</span>
                     </button>
                   </div>
                 </div>
