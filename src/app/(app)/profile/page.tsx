@@ -42,7 +42,9 @@ const AVATAR_OPTIONS = [
 ];
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
+  const sessionData = useSession();
+  const session = sessionData?.data;
+  const status = sessionData?.status ?? "unauthenticated";
   const chars = useProgress((s) => s.chars);
   const completed = useProgress((s) => s.completedLessons);
   const streak = useProgress((s) => s.streak);
