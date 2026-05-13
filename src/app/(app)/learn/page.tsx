@@ -11,8 +11,6 @@ import { Lock, Check, ChevronRight, BookOpen, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const LEVELS = [1, 2, 3, 4, 5, 6, 7] as const;
-const CHARS_PER_LESSON = 5;
-
 export default function LearnPage() {
   const [level, setLevel] = useState<number>(1);
   const completed = useProgress((s) => s.completedLessons);
@@ -22,7 +20,9 @@ export default function LearnPage() {
   const totalCharsInLevel = levelLessons.reduce((s, l) => s + l.characters.length, 0);
   const levelCompletedIds = mounted ? completed.filter((id) => id.startsWith(`hsk${level}-`)) : [];
   const completedCount = levelCompletedIds.length;
-  const completedCharsCount = mounted ? completedCount * CHARS_PER_LESSON : 0;
+  const completedCharsCount = mounted
+    ? levelLessons.filter((l) => completed.includes(l.id)).reduce((s, l) => s + l.characters.length, 0)
+    : 0;
   const totalLessons = levelLessons.length;
 
   return (
@@ -186,8 +186,13 @@ function LessonRow({
       {node}
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold italic text-[var(--foreground)] mb-0.5">
-          Урок {lessonNumber}
+          Урок {lessonNumber}{lesson.title ? ` · ${lesson.title}` : ""}
         </div>
+        {lesson.theme && (
+          <div className="text-[11px] text-[var(--foreground-soft)] mb-1">
+            {lesson.theme}
+          </div>
+        )}
         <div className="hanzi text-lg sm:text-xl tracking-[0.25em] text-[var(--foreground)] leading-tight">
           {lesson.characters.join("\u2003")}
         </div>
