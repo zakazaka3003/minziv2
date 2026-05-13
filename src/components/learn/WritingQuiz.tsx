@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { RotateCcw } from "lucide-react";
 
@@ -45,6 +45,13 @@ export function WritingQuiz({
   const [feedback, setFeedback] = useState<
     null | { tone: "ok" | "warn" | "info"; text: string }
   >({ tone: "info", text: showOutline ? "Пишите по образцу — система проверит порядок и направление черт." : "Напишите иероглиф по памяти. Система проверит порядок и направление черт." });
+
+  const onCompleteRef = useRef(onComplete);
+  const onMistakeRef = useRef(onMistake);
+  const onCorrectStrokeRef = useRef(onCorrectStroke);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+  useEffect(() => { onMistakeRef.current = onMistake; }, [onMistake]);
+  useEffect(() => { onCorrectStrokeRef.current = onCorrectStroke; }, [onCorrectStroke]);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,14 +102,14 @@ export function WritingQuiz({
                   ? "Подсказка появится сейчас — посмотри на правильное направление."
                   : "Не та черта — попробуй ещё раз. Обратите внимание на направление.",
             });
-            onMistake?.();
+            onMistakeRef.current?.();
           },
           onCorrectStroke: (info) => {
             if (cancelled) return;
             const done = info.strokeNum + 1;
             setStrokeIdx(done);
             setFeedback({ tone: "ok", text: "Верно. Следующая черта." });
-            onCorrectStroke?.(info.strokeNum, data.strokes.length);
+            onCorrectStrokeRef.current?.(info.strokeNum, data.strokes.length);
           },
           onComplete: (info) => {
             if (cancelled) return;
@@ -116,7 +123,7 @@ export function WritingQuiz({
                   ? "Отлично! Без ошибок."
                   : `Готово! Ошибок: ${info.totalMistakes}.`,
             });
-            onComplete?.({
+            onCompleteRef.current?.({
               totalMistakes: info.totalMistakes,
               totalStrokes: data.strokes.length,
             });
@@ -131,31 +138,32 @@ export function WritingQuiz({
       cancelled = true;
       writerRef.current?.cancelQuiz?.();
     };
-  }, [hanzi, size, showOutline, onComplete, onCorrectStroke, onMistake]);
+  }, [hanzi, size, showOutline]);
 
-  const restart = () => {
-    // Recreate by toggling state through the effect: simplest = remount
+  const restart = useCallback(() => {
     if (containerRef.current) containerRef.current.innerHTML = "";
     setStrokeIdx(0);
     setFeedback({ tone: "info", text: "Начинаем заново." });
-    // Re-run effect
     const writer = writerRef.current as { quiz?: WriterAPI["quiz"] } | null;
     if (writer && writer.quiz) {
       writer.quiz({
-        onMistake: () => onMistake?.(),
+        onMistake: () => onMistakeRef.current?.(),
         onCorrectStroke: (info) => {
           setStrokeIdx(info.strokeNum + 1);
-          onCorrectStroke?.(info.strokeNum, totalStrokes);
+          onCorrectStrokeRef.current?.(info.strokeNum, totalStrokes);
         },
         onComplete: (info) => {
-          onComplete?.({
+          setTimeout(() => {
+            writerRef.current?.showCharacter();
+          }, 100);
+          onCompleteRef.current?.({
             totalMistakes: info.totalMistakes,
             totalStrokes,
           });
         },
       });
     }
-  };
+  }, [totalStrokes]);
 
   return (
     <div className={cn("flex flex-col items-center gap-3", className)}>

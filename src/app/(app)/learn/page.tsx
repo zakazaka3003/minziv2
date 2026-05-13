@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { HSK1_LESSONS, type Lesson } from "@/lib/characters";
+import { getLessonsByLevel, type Lesson } from "@/lib/characters";
 import { useProgress } from "@/store/progress";
 import { useMounted } from "@/lib/useMounted";
 import { Panda } from "@/components/ui/Panda";
@@ -12,19 +12,18 @@ import { cn } from "@/lib/cn";
 
 const LEVELS = [1, 2, 3, 4, 5, 6, 7] as const;
 const CHARS_PER_LESSON = 5;
-const HSK1_TOTAL_CHARS = HSK1_LESSONS.reduce(
-  (s, l) => s + l.characters.length,
-  0
-);
 
 export default function LearnPage() {
   const [level, setLevel] = useState<number>(1);
   const completed = useProgress((s) => s.completedLessons);
   const mounted = useMounted();
 
-  const completedCount = mounted ? completed.length : 0;
+  const levelLessons = getLessonsByLevel(level);
+  const totalCharsInLevel = levelLessons.reduce((s, l) => s + l.characters.length, 0);
+  const levelCompletedIds = mounted ? completed.filter((id) => id.startsWith(`hsk${level}-`)) : [];
+  const completedCount = levelCompletedIds.length;
   const completedCharsCount = mounted ? completedCount * CHARS_PER_LESSON : 0;
-  const totalLessons = HSK1_LESSONS.length;
+  const totalLessons = levelLessons.length;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
@@ -35,8 +34,7 @@ export default function LearnPage() {
             HSK {level} · Уроки
           </h1>
           <p className="text-[var(--foreground-muted)] mt-2 max-w-md leading-snug">
-            Изучи {HSK1_TOTAL_CHARS} иероглифов и заложи фундамент китайского
-            языка
+            Изучите {totalCharsInLevel} иероглифов уровня HSK&nbsp;{level}
           </p>
         </div>
         <div className="hidden sm:block shrink-0 -mt-2 -mr-2">
@@ -55,12 +53,12 @@ export default function LearnPage() {
               {completedCharsCount}
             </span>
             <span className="text-lg text-[var(--foreground-muted)] tabular-nums">
-              / {HSK1_TOTAL_CHARS}
+              / {totalCharsInLevel}
             </span>
           </div>
           <ProgressBar
             value={completedCharsCount}
-            max={HSK1_TOTAL_CHARS}
+            max={totalCharsInLevel}
             className="mt-3"
           />
         </div>
@@ -91,19 +89,15 @@ export default function LearnPage() {
       <div className="flex items-end gap-1 sm:gap-2 mb-6 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-[var(--border)]">
         {LEVELS.map((lvl) => {
           const active = lvl === level;
-          const disabled = lvl !== 1;
           return (
             <button
               key={lvl}
-              onClick={() => !disabled && setLevel(lvl)}
-              disabled={disabled}
+              onClick={() => setLevel(lvl)}
               className={cn(
                 "px-3 sm:px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors relative -mb-px",
                 active
                   ? "text-[var(--green-deep)]"
-                  : disabled
-                    ? "text-[var(--foreground-soft)] cursor-not-allowed"
-                    : "text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
+                  : "text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
               )}
             >
               HSK {lvl}
@@ -116,39 +110,23 @@ export default function LearnPage() {
       </div>
 
       {/* Lesson list */}
-      {level === 1 ? (
-        <div className="divide-y divide-[var(--border)]" role="list">
-          {HSK1_LESSONS.map((lesson, i) => {
-            const isDone = mounted && completed.includes(lesson.id);
-            const isCurrent =
-              mounted && !isDone && i === completedCount;
-            const isLocked = !isDone && !isCurrent;
-            return (
-              <LessonRow
-                key={lesson.id}
-                lesson={lesson}
-                isDone={isDone}
-                isCurrent={isCurrent}
-                isLocked={isLocked}
-              />
-            );
-          })}
-        </div>
-      ) : (
-        <div className="card p-8 text-center text-[var(--foreground-muted)]">
-          <BookOpen
-            size={28}
-            className="mx-auto mb-3 text-[var(--foreground-soft)]"
-          />
-          <div className="font-display text-xl text-[var(--foreground)] mb-1">
-            HSK {level} — скоро
-          </div>
-          <p className="text-sm">
-            Сейчас в Minzi открыт уровень HSK 1. Остальные уровни добавим в
-            следующих обновлениях.
-          </p>
-        </div>
-      )}
+      <div className="divide-y divide-[var(--border)]" role="list">
+        {levelLessons.map((lesson, i) => {
+          const isDone = mounted && completed.includes(lesson.id);
+          const isCurrent =
+            mounted && !isDone && i === completedCount;
+          const isLocked = !isDone && !isCurrent;
+          return (
+            <LessonRow
+              key={lesson.id}
+              lesson={lesson}
+              isDone={isDone}
+              isCurrent={isCurrent}
+              isLocked={isLocked}
+            />
+          );
+        })}
+      </div>
 
       {/* Bottom CTA banner */}
       <div className="mt-10 rounded-[var(--radius-lg)] border border-[var(--green-soft)] bg-[var(--bamboo-soft)] p-5 sm:p-6 flex flex-col sm:flex-row items-center gap-5">

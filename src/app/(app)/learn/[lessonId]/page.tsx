@@ -2,7 +2,7 @@
 
 import { use, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ALL_CHARACTERS, HSK1_LESSONS, getLesson } from "@/lib/characters";
+import { ALL_CHARACTERS, ALL_LESSONS, getLesson } from "@/lib/characters";
 import { LessonFlow } from "@/components/learn/LessonFlow";
 
 export default function LessonPage({
@@ -12,7 +12,7 @@ export default function LessonPage({
 }) {
   const { lessonId } = use(params);
   const router = useRouter();
-  const lesson = getLesson(lessonId) ?? HSK1_LESSONS[0];
+  const lesson = getLesson(lessonId) ?? ALL_LESSONS[0];
 
   const characters = useMemo(
     () =>
@@ -29,12 +29,12 @@ export default function LessonPage({
       // similar in difficulty.
       ALL_CHARACTERS.filter(
         (c) =>
-          c.level <= 2 &&
+          c.level <= Math.max(lesson.level, 2) &&
           c.pinyin &&
           c.meaningsRu &&
           c.meaningsRu.length > 0
       ),
-    []
+    [lesson.level]
   );
 
   return (
