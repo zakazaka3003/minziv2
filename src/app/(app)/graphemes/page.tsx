@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ALL_CHARACTERS, getChar, meaningRu, type CharRecord } from "@/lib/characters";
 import { Card } from "@/components/ui/Card";
-import { Eraser, Search, Undo2 } from "lucide-react";
+import { Eraser, Search, Undo2, PenTool } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 interface CharMatch {
   character: string;
   score: number;
 }
+
+const CANVAS_SIZE = 512;
 
 export default function GraphemesPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -53,7 +55,7 @@ export default function GraphemesPage() {
     setSelectedChar(c);
     const related = ALL_CHARACTERS.filter(
       (ch) => ch.hanzi !== hanzi && (ch.components?.includes(hanzi) || ch.radical === hanzi)
-    ).slice(0, 24);
+    ).slice(0, 30);
     setRelatedChars(related);
   }, []);
 
@@ -61,7 +63,7 @@ export default function GraphemesPage() {
     if (!matcherRef.current || !hlRef.current || strokesRef.current.length === 0) return;
     try {
       const analyzed = new hlRef.current.AnalyzedCharacter(strokesRef.current);
-      matcherRef.current.match(analyzed, 8, (results: CharMatch[]) => {
+      matcherRef.current.match(analyzed, 12, (results: CharMatch[]) => {
         setMatches(results);
         if (results.length > 0) {
           const top = results[0].character;
@@ -86,11 +88,14 @@ export default function GraphemesPage() {
       selectCharFn(q.trim());
       return;
     }
+    const lower = q.toLowerCase();
     const found = ALL_CHARACTERS.filter(
       (c) =>
         c.hanzi.includes(q) ||
         c.radical === q ||
-        c.components?.includes(q)
+        c.components?.includes(q) ||
+        c.pinyin?.toLowerCase().includes(lower) ||
+        meaningRu(c)?.toLowerCase().includes(lower)
     ).slice(0, 20);
     if (found.length > 0) {
       selectCharFn(found[0].hanzi);
@@ -103,8 +108,7 @@ export default function GraphemesPage() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = "#2a2c28";
-    ctx.lineWidth = 5;
+    ctx.strokeStyle = "#1a1c18";
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     for (const stroke of strokesRef.current) {
@@ -112,9 +116,18 @@ export default function GraphemesPage() {
       ctx.beginPath();
       ctx.moveTo(stroke[0][0], stroke[0][1]);
       for (let i = 1; i < stroke.length; i++) {
+        const speed = i > 0
+          ? Math.sqrt(
+              Math.pow(stroke[i][0] - stroke[i - 1][0], 2) +
+              Math.pow(stroke[i][1] - stroke[i - 1][1], 2)
+            )
+          : 0;
+        ctx.lineWidth = Math.max(3, Math.min(8, 10 - speed * 0.3));
         ctx.lineTo(stroke[i][0], stroke[i][1]);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(stroke[i][0], stroke[i][1]);
       }
-      ctx.stroke();
     }
   }, []);
 
@@ -133,9 +146,9 @@ export default function GraphemesPage() {
       return [(e.clientX - r.left) * s, (e.clientY - r.top) * s];
     };
 
-    const drawLine = (from: number[], to: number[]) => {
-      ctx.strokeStyle = "#2a2c28";
-      ctx.lineWidth = 5;
+    const drawSegment = (from: number[], to: number[], speed: number) => {
+      ctx.strokeStyle = "#1a1c18";
+      ctx.lineWidth = Math.max(3, Math.min(8, 10 - speed * 0.3));
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.beginPath();
@@ -154,8 +167,12 @@ export default function GraphemesPage() {
       if (!drawingRef.current) return;
       const [x, y] = getPos(e);
       const pts = currentStrokeRef.current;
+      const prev = pts[pts.length - 1];
       pts.push([x, y]);
-      if (pts.length >= 2) drawLine(pts[pts.length - 2], [x, y]);
+      const speed = Math.sqrt(
+        Math.pow(x - prev[0], 2) + Math.pow(y - prev[1], 2)
+      );
+      drawSegment(prev, [x, y], speed);
     };
 
     const finishStroke = () => {
@@ -181,8 +198,12 @@ export default function GraphemesPage() {
       if (!drawingRef.current) return;
       const [x, y] = getPos(e.touches[0]);
       const pts = currentStrokeRef.current;
+      const prev = pts[pts.length - 1];
       pts.push([x, y]);
-      if (pts.length >= 2) drawLine(pts[pts.length - 2], [x, y]);
+      const speed = Math.sqrt(
+        Math.pow(x - prev[0], 2) + Math.pow(y - prev[1], 2)
+      );
+      drawSegment(prev, [x, y], speed);
     };
 
     const onTouchEnd = (e: TouchEvent) => {
@@ -236,28 +257,33 @@ export default function GraphemesPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-8 py-8">
       <header className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-display font-medium">
-          Поиск графем
-        </h1>
-        <p className="text-sm text-[var(--foreground-muted)] mt-1.5 max-w-lg">
-          Нарисуйте иероглиф или графему, чтобы найти её значение и увидеть все иероглифы, в которых она используется
+        <div className="flex items-center gap-3 mb-1.5">
+          <div className="w-10 h-10 rounded-xl bg-[var(--green-soft)] flex items-center justify-center">
+            <PenTool size={18} className="text-[var(--green)]" />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-display font-medium">
+            Поиск графем
+          </h1>
+        </div>
+        <p className="text-sm text-[var(--foreground-muted)] mt-1.5 max-w-lg ml-[52px]">
+          Нарисуйте иероглиф или введите текст для поиска
         </p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6 lg:gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 lg:gap-8">
         {/* Left: Drawing + search */}
         <div className="space-y-4">
           {/* Drawing canvas */}
-          <div className="relative">
+          <div className="relative bg-white rounded-2xl shadow-sm border border-[var(--border)] overflow-hidden">
             <canvas
               ref={canvasRef}
-              width={340}
-              height={340}
-              className="w-full aspect-square rounded-2xl border-2 border-[var(--border)] bg-white cursor-crosshair shadow-sm"
+              width={CANVAS_SIZE}
+              height={CANVAS_SIZE}
+              className="w-full aspect-square cursor-crosshair"
               style={{
                 backgroundImage:
-                  "linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)",
-                backgroundSize: "50% 50%",
+                  "linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px), linear-gradient(rgba(0,0,0,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.08) 1px, transparent 1px)",
+                backgroundSize: "25% 25%, 25% 25%, 50% 50%, 50% 50%",
                 backgroundPosition: "center center",
               }}
             />
@@ -268,40 +294,52 @@ export default function GraphemesPage() {
                 onClick={undoStroke}
                 disabled={strokeCount === 0}
                 className={cn(
-                  "w-9 h-9 rounded-xl flex items-center justify-center backdrop-blur-md transition-all",
+                  "w-10 h-10 rounded-xl flex items-center justify-center backdrop-blur-md transition-all",
                   strokeCount > 0
-                    ? "bg-white/90 text-[var(--foreground)] shadow-sm hover:shadow-md"
+                    ? "bg-white/90 text-[var(--foreground)] shadow-md hover:shadow-lg active:scale-95"
                     : "bg-white/50 text-[var(--foreground-soft)] cursor-not-allowed"
                 )}
                 aria-label="Отменить черту"
               >
-                <Undo2 size={16} />
+                <Undo2 size={18} />
               </button>
               <button
                 type="button"
                 onClick={clearCanvas}
                 disabled={strokeCount === 0}
                 className={cn(
-                  "w-9 h-9 rounded-xl flex items-center justify-center backdrop-blur-md transition-all",
+                  "w-10 h-10 rounded-xl flex items-center justify-center backdrop-blur-md transition-all",
                   strokeCount > 0
-                    ? "bg-white/90 text-[var(--foreground)] shadow-sm hover:shadow-md"
+                    ? "bg-white/90 text-[var(--foreground)] shadow-md hover:shadow-lg active:scale-95"
                     : "bg-white/50 text-[var(--foreground-soft)] cursor-not-allowed"
                 )}
                 aria-label="Очистить"
               >
-                <Eraser size={16} />
+                <Eraser size={18} />
               </button>
             </div>
+            {/* Stroke counter */}
+            {strokeCount > 0 && (
+              <div className="absolute bottom-3 left-3 text-xs text-[var(--foreground-soft)] bg-white/80 backdrop-blur-sm px-2.5 py-1 rounded-lg">
+                {strokeCount} {strokeCount === 1 ? "черта" : strokeCount < 5 ? "черты" : "черт"}
+              </div>
+            )}
             {strokeCount === 0 && ready && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <span className="text-[var(--foreground-soft)] text-sm select-none">
-                  Рисуйте здесь
-                </span>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 rounded-xl bg-[var(--surface-2)] flex items-center justify-center">
+                    <PenTool size={20} className="text-[var(--foreground-soft)]" />
+                  </div>
+                  <span className="text-[var(--foreground-soft)] text-sm select-none">
+                    Рисуйте здесь
+                  </span>
+                </div>
               </div>
             )}
             {!ready && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-sm text-[var(--foreground-muted)] bg-white/80 px-4 py-2 rounded-xl">
+                <div className="flex items-center gap-2 text-sm text-[var(--foreground-muted)] bg-white/80 px-4 py-2 rounded-xl">
+                  <span className="inline-block w-4 h-4 border-2 border-[var(--green)]/30 border-t-[var(--green)] rounded-full animate-spin" />
                   Загрузка...
                 </div>
               </div>
@@ -315,7 +353,7 @@ export default function GraphemesPage() {
               type="text"
               value={textQuery}
               onChange={(e) => searchByText(e.target.value)}
-              placeholder="Или введите иероглиф..."
+              placeholder="Поиск по пиньинь, русскому или иероглифу..."
               className="w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--border)] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[var(--green)]/20 focus:border-[var(--green)] transition-shadow"
             />
           </div>
@@ -324,7 +362,7 @@ export default function GraphemesPage() {
           {matches.length > 0 && (
             <div>
               <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--foreground-soft)] mb-2 px-1">
-                Результаты распознавания
+                Найдено ({matches.length})
               </div>
               <div className="grid grid-cols-4 gap-1.5">
                 {matches.map((m) => {
@@ -336,7 +374,7 @@ export default function GraphemesPage() {
                       type="button"
                       onClick={() => selectCharFn(m.character)}
                       className={cn(
-                        "flex flex-col items-center gap-0.5 py-2.5 px-1 rounded-xl border transition-all",
+                        "flex flex-col items-center gap-0.5 py-3 px-1 rounded-xl border transition-all",
                         active
                           ? "border-[var(--green)] bg-[var(--green-soft)] shadow-sm"
                           : "border-[var(--border)] bg-white hover:shadow-sm hover:border-[var(--green)]/40"
@@ -345,9 +383,12 @@ export default function GraphemesPage() {
                       <span className="hanzi text-2xl leading-none">{m.character}</span>
                       {c && (
                         <span className="text-[10px] text-[var(--foreground-muted)] truncate max-w-full px-1">
-                          {meaningRu(c) ? meaningRu(c).slice(0, 8) : c.pinyin}
+                          {meaningRu(c) ? meaningRu(c)!.slice(0, 10) : c.pinyin}
                         </span>
                       )}
+                      <span className="text-[9px] text-[var(--foreground-soft)]">
+                        {Math.round(m.score * 100)}%
+                      </span>
                     </button>
                   );
                 })}
@@ -379,12 +420,17 @@ export default function GraphemesPage() {
                       </div>
                     )}
                     <div className="flex flex-wrap gap-2 mt-3">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-[var(--surface-2)] text-xs text-[var(--foreground-muted)]">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-[var(--green-soft)] text-xs text-[var(--green)] font-medium">
                         HSK {selectedChar.level || "—"}
                       </span>
                       {selectedChar.radical && (
                         <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-[var(--surface-2)] text-xs text-[var(--foreground-muted)]">
                           Ключ: {selectedChar.radical}
+                        </span>
+                      )}
+                      {selectedChar.hasStrokes && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-[var(--surface-2)] text-xs text-[var(--foreground-muted)]">
+                          Есть порядок черт
                         </span>
                       )}
                     </div>
@@ -411,7 +457,7 @@ export default function GraphemesPage() {
                           key={i}
                           type="button"
                           onClick={() => selectCharFn(comp)}
-                          className="card-soft px-4 py-3 flex items-center gap-3 hover:shadow-md transition-all rounded-xl"
+                          className="card-soft px-4 py-3 flex items-center gap-3 hover:shadow-md transition-all rounded-xl active:scale-95"
                         >
                           <span className="hanzi text-3xl">{comp}</span>
                           <div className="text-left">
@@ -445,7 +491,7 @@ export default function GraphemesPage() {
                         key={c.hanzi}
                         type="button"
                         onClick={() => selectCharFn(c.hanzi)}
-                        className="card-soft px-2 py-3 flex flex-col items-center gap-1 hover:shadow-md transition-all rounded-xl"
+                        className="card-soft px-2 py-3 flex flex-col items-center gap-1 hover:shadow-md transition-all rounded-xl active:scale-95"
                       >
                         <span className="hanzi text-2xl">{c.hanzi}</span>
                         <span className="pinyin text-[10px] text-[var(--foreground-muted)]">
@@ -469,7 +515,7 @@ export default function GraphemesPage() {
                 Начните рисовать
               </div>
               <div className="text-sm text-[var(--foreground-soft)] max-w-xs">
-                Нарисуйте графему или иероглиф на холсте слева, и мы найдём её значение и связанные иероглифы
+                Нарисуйте графему или иероглиф на холсте, и мы найдём её значение и связанные иероглифы
               </div>
             </div>
           )}

@@ -18,12 +18,17 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  password      String?
+  username      String?   @unique
+  bio           String?
 
   accounts        Account[]
   sessions        Session[]
   characterStates CharacterState[]
   reviews         ReviewLog[]
   profile         UserProfile?
+  friends         Friendship[] @relation("UserFriends")
+  friendOf        Friendship[] @relation("FriendOf")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -120,4 +125,19 @@ model ReviewLog {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// ─── Friends ────────────────────────────────────────────────────────────────
+
+model Friendship {
+  id        String   @id @default(cuid())
+  userId    String
+  friendId  String
+  user      User     @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friend    User     @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+  status    String   @default("pending") // pending | accepted
+  createdAt DateTime @default(now())
+
+  @@unique([userId, friendId])
+  @@index([friendId])
 }
