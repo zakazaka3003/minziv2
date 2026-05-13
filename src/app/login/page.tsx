@@ -51,8 +51,7 @@ export default function LoginPage() {
             : "Неверный email или пароль"
         );
       } else {
-        router.push("/learn");
-        router.refresh();
+        window.location.href = "/learn";
       }
     } catch {
       setError("Произошла ошибка");

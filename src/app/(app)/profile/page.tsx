@@ -174,7 +174,7 @@ export default function ProfilePage() {
     } catch { /* ignore */ }
   };
 
-  if (!mounted) return null;
+  if (!mounted || status === "loading") return null;
 
   const totalReviews = Object.values(chars).reduce(
     (s, c) => s + c.attempts,
