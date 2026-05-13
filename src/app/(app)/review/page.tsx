@@ -405,6 +405,17 @@ export default function ReviewPage() {
   const todayTotal = todayEntry?.total ?? 0;
   const hasAnyStudied = Object.keys(chars).length > 0;
 
+  /* Mini bar chart for sidebar */
+  const todayBars = useMemo(() => {
+    const last7 = daily.slice(-7);
+    const maxR = Math.max(1, ...last7.map((d) => d.reviewed));
+    return last7.map((d) => ({
+      date: d.date,
+      height: Math.max(8, (d.reviewed / maxR) * 100),
+      reviewed: d.reviewed,
+    }));
+  }, [daily]);
+
   /* Current review character */
   const currentHanzi = queue[queueIdx] ?? null;
   const currentChar = currentHanzi ? getChar(currentHanzi) : null;
@@ -498,20 +509,19 @@ export default function ReviewPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-8 py-6">
         {/* Header */}
         <header className="mb-6">
-          <h1 className="text-2xl font-display font-medium mb-3">Повторение</h1>
-
-          {/* Daily goal bar */}
+          <h1 className="text-2xl font-display font-semibold mb-1 text-[var(--ink)]">Повторение</h1>
+          <p className="text-sm text-[var(--foreground-muted)] mb-1">Сегодняшняя цель</p>
           <div className="flex items-center gap-4 mb-4">
-            <div className="text-sm text-[var(--foreground-muted)]">Сегодняшняя цель</div>
-            <div className="flex-1 h-2.5 rounded-full bg-[var(--surface-3)] overflow-hidden">
+            <div className="flex items-end gap-2">
+              <span className="text-3xl font-bold text-[var(--green)] leading-none tabular-nums">{todayReviewed}</span>
+              <span className="text-sm text-[var(--foreground-muted)] pb-0.5">/ 30 мин</span>
+            </div>
+            <div className="flex-1 h-2 rounded-full bg-[var(--surface-3)] overflow-hidden">
               <div
                 className="h-full rounded-full bg-[var(--green)] transition-[width] duration-500"
-                style={{ width: `${Math.min(100, (todayReviewed / 18) * 100)}%` }}
+                style={{ width: `${Math.min(100, (todayReviewed / 30) * 100)}%` }}
               />
             </div>
-            <span className="text-lg font-bold text-[var(--foreground)]">
-              {todayReviewed}<span className="text-sm font-normal text-[var(--foreground-muted)]"> / 18</span>
-            </span>
             {streak > 0 && (
               <div className="streak-pill text-sm">
                 <span>🔥</span>
@@ -671,33 +681,24 @@ export default function ReviewPage() {
      DASHBOARD (idle phase)
      ═══════════════════════════════════════════════════════════════════════ */
 
-  const todayBars = useMemo(() => {
-    const last7 = daily.slice(-7);
-    const maxR = Math.max(1, ...last7.map((d) => d.reviewed));
-    return last7.map((d) => ({
-      date: d.date,
-      height: Math.max(8, (d.reviewed / maxR) * 100),
-      reviewed: d.reviewed,
-    }));
-  }, [daily]);
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
-      {/* Page title */}
-      <h1 className="text-3xl font-display font-medium mb-6">Повторение</h1>
-
-      {/* Daily goal bar */}
+      {/* Page title + daily goal — reference style */}
+      <h1 className="text-3xl font-display font-semibold mb-2 text-[var(--ink)]">Повторение</h1>
+      <p className="text-sm text-[var(--foreground-muted)] mb-1">Сегодняшняя цель</p>
+      <div className="flex items-end gap-3 mb-2">
+        <span className="text-4xl font-bold text-[var(--green)] leading-none tabular-nums">
+          {todayReviewed}
+        </span>
+        <span className="text-base text-[var(--foreground-muted)] pb-0.5">/ 30 мин</span>
+      </div>
       <div className="flex items-center gap-4 mb-8">
-        <div className="text-sm text-[var(--foreground-muted)]">Сегодняшняя цель</div>
-        <div className="flex-1 h-3 rounded-full bg-[var(--surface-3)] overflow-hidden max-w-lg">
+        <div className="flex-1 h-2.5 rounded-full bg-[var(--surface-3)] overflow-hidden max-w-lg">
           <div
             className="h-full rounded-full bg-[var(--green)] transition-[width] duration-500"
-            style={{ width: `${Math.min(100, (todayReviewed / 18) * 100)}%` }}
+            style={{ width: `${Math.min(100, (todayReviewed / 30) * 100)}%` }}
           />
         </div>
-        <span className="text-2xl font-bold text-[var(--green)]">
-          {todayReviewed}<span className="text-base font-normal text-[var(--foreground-muted)]"> / 18</span>
-        </span>
         {streak > 0 && (
           <div className="streak-pill">
             <span>🔥</span>
