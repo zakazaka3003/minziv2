@@ -112,7 +112,7 @@ function Stat({
       <div className="text-xs uppercase tracking-[0.18em] text-[var(--foreground-soft)] mb-1">
         {label}
       </div>
-      <div className="text-3xl font-display font-medium tabular-nums">
+      <div className="text-3xl font-sans font-bold tabular-nums">
         {value}
       </div>
       <div className="text-[11px] text-[var(--foreground-muted)] mt-1">

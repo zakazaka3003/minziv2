@@ -11,6 +11,7 @@ import {
   User,
   Settings,
   Flame,
+  PenTool,
 } from "lucide-react";
 import Image from "next/image";
 import { ProgressBar } from "@/components/ui/Progress";
@@ -21,6 +22,7 @@ const NAV = [
   { href: "/learn", label: "Учиться", icon: GraduationCap },
   { href: "/review", label: "Повторение", icon: Repeat },
   { href: "/dictionary", label: "Словарь", icon: Book },
+  { href: "/graphemes", label: "Графемы", icon: PenTool },
   { href: "/stats", label: "Статистика", icon: BarChart3 },
   { href: "/profile", label: "Профиль", icon: User },
 ] as const;

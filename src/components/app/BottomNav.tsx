@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { GraduationCap, Repeat, Book, BarChart3, User } from "lucide-react";
+import { GraduationCap, Repeat, Book, User, PenTool } from "lucide-react";
 
 const NAV = [
   { href: "/learn", label: "Учить", icon: GraduationCap },
   { href: "/review", label: "Повтор", icon: Repeat },
   { href: "/dictionary", label: "Словарь", icon: Book },
-  { href: "/stats", label: "Статы", icon: BarChart3 },
+  { href: "/graphemes", label: "Графемы", icon: PenTool },
   { href: "/profile", label: "Профиль", icon: User },
 ] as const;
 

@@ -51,7 +51,7 @@ export default function LearnPage() {
             Ваш прогресс
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl sm:text-4xl font-display font-medium text-[var(--green-deep)] tabular-nums">
+            <span className="text-3xl sm:text-4xl font-sans font-bold text-[var(--green-deep)] tabular-nums">
               {completedCharsCount}
             </span>
             <span className="text-lg text-[var(--foreground-muted)] tabular-nums">
@@ -69,7 +69,7 @@ export default function LearnPage() {
             Уроков пройдено
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl sm:text-4xl font-display font-medium text-[var(--green-deep)] tabular-nums">
+            <span className="text-3xl sm:text-4xl font-sans font-bold text-[var(--green-deep)] tabular-nums">
               {completedCount}
             </span>
             <span className="text-lg text-[var(--foreground-muted)] tabular-nums">
@@ -81,7 +81,7 @@ export default function LearnPage() {
           <div className="text-xs uppercase tracking-[0.18em] text-[var(--foreground-soft)] mb-2">
             Иероглифов изучено
           </div>
-          <div className="text-3xl sm:text-4xl font-display font-medium text-[var(--green-deep)] tabular-nums">
+          <div className="text-3xl sm:text-4xl font-sans font-bold text-[var(--green-deep)] tabular-nums">
             {completedCharsCount}
           </div>
         </div>

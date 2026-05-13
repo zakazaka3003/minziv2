@@ -25,7 +25,7 @@ interface WriterAPI {
     showHintAfterMisses?: number;
   }) => void;
   cancelQuiz: () => void;
-  showCharacter: () => void;
+  showCharacter: (opts?: { duration?: number }) => void;
   getCharacterData: () => Promise<{ strokes: unknown[] }>;
 }
 
@@ -66,7 +66,7 @@ export function WritingQuiz({
           outlineColor: "#e6e3da",
           drawingColor: "#c43a3a",
           highlightColor: "#2e7d4f",
-          highlightOnComplete: true,
+          highlightOnComplete: false,
           showHintAfterMisses: 2,
           charDataLoader(c, onCompleteCb) {
             fetch(
@@ -106,7 +106,9 @@ export function WritingQuiz({
           },
           onComplete: (info) => {
             if (cancelled) return;
-            writer.showCharacter();
+            setTimeout(() => {
+              writer.showCharacter();
+            }, 100);
             setFeedback({
               tone: "ok",
               text:
