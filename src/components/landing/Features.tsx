@@ -26,15 +26,15 @@ const ITEMS = [
 export function Features() {
   return (
     <section id="features" className="py-14 sm:py-20">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {ITEMS.map(({ icon: Icon, title, body }, i) => (
             <div
               key={title}
-              className="glass rounded-2xl p-6 flex flex-col gap-3 hover-lift"
+              className="glass rounded-xl p-6 flex flex-col gap-3 hover-lift"
               style={{ animationDelay: `${i * 80}ms` }}
             >
-              <div className="h-11 w-11 rounded-xl bg-[var(--green-soft)] text-[var(--green-deep)] flex items-center justify-center">
+              <div className="h-11 w-11 rounded-lg bg-[var(--green-soft)] text-[var(--green-deep)] flex items-center justify-center">
                 <Icon size={20} strokeWidth={1.8} />
               </div>
               <h3 className="font-display font-medium text-lg tracking-tight">

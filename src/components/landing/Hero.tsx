@@ -5,34 +5,28 @@ import { ArrowRight } from "lucide-react";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden">
+    <section className="relative overflow-hidden min-h-[90dvh] flex items-center">
       <Image
-        src="/bamboo/bamboo_2.png"
+        src="/panda/bmb1.png"
         alt=""
-        width={120}
-        height={300}
-        className="absolute -left-4 top-[8%] w-24 opacity-80 hidden md:block pointer-events-none select-none"
+        width={100}
+        height={360}
+        className="absolute -left-2 top-[12%] w-20 lg:w-24 opacity-60 hidden md:block pointer-events-none select-none"
       />
       <Image
-        src="/bg/bg_mountain_sun.png"
+        src="/panda/pen.png"
         alt=""
-        width={600}
+        width={200}
         height={400}
-        className="absolute right-0 bottom-0 w-[420px] opacity-40 hidden lg:block pointer-events-none select-none"
-        style={{
-          maskImage:
-            "radial-gradient(ellipse at 30% 70%, black 35%, transparent 80%)",
-          WebkitMaskImage:
-            "radial-gradient(ellipse at 30% 70%, black 35%, transparent 80%)",
-        }}
+        className="absolute right-[8%] -bottom-8 w-[140px] lg:w-[180px] opacity-25 rotate-[-25deg] hidden lg:block pointer-events-none select-none"
       />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-24 lg:py-28 grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-16 items-center">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-16 sm:py-24 lg:py-28 grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-16 items-center w-full">
         <div className="animate-fade-in-up">
           <div className="text-xs uppercase tracking-[0.3em] text-[var(--green-deep)] mb-5 font-medium">
             пишите &middot; понимайте &middot; запоминайте
           </div>
-          <h1 className="text-4xl md:text-6xl tracking-tighter leading-none font-display font-medium">
+          <h1 className="text-4xl md:text-6xl xl:text-7xl tracking-tighter leading-none font-display font-medium">
             Учите иероглифы
             <br />
             через письмо.

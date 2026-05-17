@@ -28,7 +28,7 @@ const STEPS = [
 export function HowItWorks() {
   return (
     <section id="how" className="py-16 sm:py-24">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-12 items-center">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-12 items-center">
         <div>
           <div className="text-xs uppercase tracking-[0.3em] text-[var(--green-deep)] mb-4 font-medium">
             Как проходит обучение
@@ -116,11 +116,11 @@ export function HowItWorks() {
             </button>
           </MockCard>
           <Image
-            src="/bamboo/bamboo_3.png"
+            src="/panda/bmb2.png"
             alt=""
             width={80}
             height={200}
-            className="absolute -right-6 -bottom-8 w-20 opacity-70 hidden md:block pointer-events-none"
+            className="absolute -right-6 -bottom-8 w-20 opacity-50 hidden md:block pointer-events-none"
           />
         </div>
       </div>

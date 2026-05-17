@@ -19,7 +19,7 @@ const REVIEWS = [
 export function Testimonials() {
   return (
     <section id="testimonials" className="py-16 sm:py-24">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10">
         <div className="text-xs uppercase tracking-[0.3em] text-[var(--green-deep)] mb-4 font-medium text-center">
           Отзывы
         </div>
@@ -30,7 +30,7 @@ export function Testimonials() {
           {REVIEWS.map((r, i) => (
             <figure
               key={r.name}
-              className="glass rounded-2xl p-6 relative hover-lift"
+              className="glass rounded-xl p-6 relative hover-lift"
               style={{ animationDelay: `${i * 100}ms` }}
             >
               <div className="flex items-center gap-3 mb-4">
