@@ -71,6 +71,7 @@ export function HeroDemo() {
         </div>
       </Card>
 
+      {/* Decorative panda peeking from bottom right */}
       <div className="absolute -bottom-4 -right-2 sm:-right-8 hidden md:block pointer-events-none">
         <Panda mood="resting" size={120} />
       </div>
