@@ -27,18 +27,18 @@ const STEPS = [
 
 export function HowItWorks() {
   return (
-    <section id="how" className="py-16 sm:py-24">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-12 items-center">
+    <section id="how" className="relative py-12 sm:py-18">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-10 items-center">
         <div>
-          <div className="text-xs uppercase tracking-[0.3em] text-[var(--green-deep)] mb-4 font-medium">
+          <div className="text-[11px] uppercase tracking-[0.3em] text-[var(--green-deep)] mb-3 font-medium">
             Как проходит обучение
           </div>
-          <h2 className="text-3xl md:text-5xl font-display font-medium tracking-tighter leading-none">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-medium tracking-[-0.03em] leading-[1.1]">
             От первой черты
             <br />
             до уверенного письма
           </h2>
-          <ol className="mt-8 space-y-5">
+          <ol className="mt-6 space-y-4">
             {STEPS.map(({ n, title, body }) => (
               <li key={n} className="flex gap-4 items-start">
                 <div className="h-8 w-8 shrink-0 rounded-full bg-[var(--green)] text-white flex items-center justify-center text-sm font-semibold">
@@ -53,8 +53,8 @@ export function HowItWorks() {
               </li>
             ))}
           </ol>
-          <div className="mt-8">
-            <Link href="/learn" className="btn btn-secondary group">
+          <div className="mt-6">
+            <Link href="/learn" className="btn btn-secondary group text-sm">
               Попробовать демо-урок
               <ArrowRight
                 size={14}
@@ -118,9 +118,9 @@ export function HowItWorks() {
           <Image
             src="/panda/bmb2.png"
             alt=""
-            width={80}
-            height={200}
-            className="absolute -right-6 -bottom-8 w-20 opacity-50 hidden md:block pointer-events-none"
+            width={60}
+            height={160}
+            className="absolute -right-4 -bottom-6 w-14 opacity-[0.08] hidden md:block pointer-events-none"
           />
         </div>
       </div>
@@ -139,7 +139,7 @@ function MockCard({
 }) {
   return (
     <div
-      className={`glass rounded-xl p-3 flex flex-col gap-1 hover-lift ${hi ? "shadow-lg scale-[1.04] z-[1]" : ""}`}
+      className={`rounded-lg border border-[var(--border)] bg-[var(--surface)]/80 p-3 flex flex-col gap-1 transition-all duration-300 hover:shadow-md ${hi ? "shadow-md scale-[1.03] z-[1]" : ""}`}
     >
       <div className="flex items-center justify-between text-[11px] text-[var(--foreground-muted)]">
         <span className="flex items-center gap-1">

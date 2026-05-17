@@ -3,23 +3,24 @@ import Link from "next/link";
 
 export function Footer() {
   return (
-    <footer className="border-t border-[var(--border)]">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-12 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-8 items-start text-sm text-[var(--foreground-muted)]">
+    <footer className="mt-4">
+      <div className="ink-divider" />
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-10 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 items-start text-sm text-[var(--foreground-muted)]">
         <div>
-          <Link href="/" className="flex items-center gap-2.5 mb-4">
-            <Image src="/icon.svg" alt="" width={28} height={28} />
-            <span className="text-base font-display font-semibold tracking-tight text-[var(--foreground)]">
+          <Link href="/" className="flex items-center gap-2 mb-3">
+            <Image src="/icon.svg" alt="" width={24} height={24} />
+            <span className="text-sm font-display font-semibold tracking-tight text-[var(--foreground)]">
               Minzi
             </span>
           </Link>
-          <p className="max-w-sm leading-relaxed">
+          <p className="max-w-sm text-[13px] leading-relaxed">
             Учите китайские иероглифы через письмо и понимание.
           </p>
-          <p className="mt-3 text-xs text-[var(--foreground-soft)]">
+          <p className="mt-2 text-[11px] text-[var(--foreground-soft)]">
             Данные: HSK 3.0, Hanzi Writer, MakeMeAHanzi, CC-CEDICT.
           </p>
         </div>
-        <nav className="flex flex-col gap-2 text-sm">
+        <nav className="flex flex-col gap-1.5 text-[13px]">
           <Link
             href="#"
             className="hover:text-[var(--foreground)] transition-colors"

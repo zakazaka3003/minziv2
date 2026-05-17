@@ -110,11 +110,10 @@ body {
 .bg-rice {
   background-color: var(--background);
   background-image:
-    radial-gradient(1200px 600px at 80% -10%, rgba(218, 100, 80, 0.06), transparent 60%),
-    radial-gradient(900px 700px at -10% 30%, rgba(46, 125, 79, 0.05), transparent 60%),
-    radial-gradient(rgba(0,0,0,0.025) 1px, transparent 1px);
-  background-size: auto, auto, 18px 18px;
-  background-position: 0 0, 0 0, 0 0;
+    radial-gradient(1200px 600px at 80% -10%, rgba(218, 100, 80, 0.04), transparent 60%),
+    radial-gradient(900px 700px at -10% 30%, rgba(46, 125, 79, 0.035), transparent 60%),
+    url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  background-size: auto, auto, 200px 200px;
 }
 
 .ink-divider {
@@ -122,11 +121,36 @@ body {
   background: linear-gradient(
     to right,
     transparent,
-    rgba(31, 33, 30, 0.15) 30%,
-    rgba(31, 33, 30, 0.15) 70%,
+    rgba(31, 33, 30, 0.12) 30%,
+    rgba(31, 33, 30, 0.12) 70%,
     transparent
   );
 }
+
+/* Mountain silhouette decoration */
+.mountain-silhouette {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  opacity: 0.04;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 120' preserveAspectRatio='none'%3E%3Cpath d='M0 120L180 60L320 90L480 30L620 70L780 20L920 65L1080 15L1200 55L1320 25L1440 50V120H0Z' fill='%231a3f2a'/%3E%3Cpath d='M0 120L240 80L400 100L560 50L720 85L880 40L1040 75L1200 35L1440 70V120H0Z' fill='%231a3f2a' opacity='0.5'/%3E%3C/svg%3E") no-repeat bottom/100% auto;
+}
+
+/* Bamboo corner decoration */
+.bamboo-corner-left::before,
+.bamboo-corner-right::after {
+  content: '';
+  position: absolute;
+  width: 40px;
+  height: 200px;
+  opacity: 0.06;
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 200'%3E%3Cline x1='20' y1='0' x2='20' y2='200' stroke='%231a3f2a' stroke-width='3'/%3E%3Cline x1='12' y1='40' x2='28' y2='40' stroke='%231a3f2a' stroke-width='2'/%3E%3Cline x1='12' y1='80' x2='28' y2='80' stroke='%231a3f2a' stroke-width='2'/%3E%3Cline x1='12' y1='120' x2='28' y2='120' stroke='%231a3f2a' stroke-width='2'/%3E%3Cline x1='12' y1='160' x2='28' y2='160' stroke='%231a3f2a' stroke-width='2'/%3E%3Cpath d='M20 40 Q35 25 30 10' stroke='%231a3f2a' stroke-width='1.5' fill='none'/%3E%3Cpath d='M20 80 Q5 65 8 50' stroke='%231a3f2a' stroke-width='1.5' fill='none'/%3E%3Cpath d='M20 120 Q35 105 32 90' stroke='%231a3f2a' stroke-width='1.5' fill='none'/%3E%3C/svg%3E") no-repeat center/contain;
+}
+.bamboo-corner-left::before { left: 8px; top: 50%; transform: translateY(-50%); }
+.bamboo-corner-right::after { right: 8px; top: 50%; transform: translateY(-50%); }
 
 /* ─── Cards ────────────────────────────────────────────────────────────── */
 

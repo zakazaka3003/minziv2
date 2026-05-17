@@ -9,7 +9,7 @@ import { Footer } from "@/components/landing/Footer";
 
 export default function HomePage() {
   return (
-    <>
+    <div className="bg-rice">
       <Header />
       <Hero />
       <Features />
@@ -18,6 +18,6 @@ export default function HomePage() {
       <Testimonials />
       <CTABand />
       <Footer />
-    </>
+    </div>
   );
 }
