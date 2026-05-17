@@ -1,19 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useProgress, dueChars, type Outcome, type CharProgress, type DailyEntry } from "@/store/progress";
+import { useViewportWidth } from "@/lib/useViewport";
 import { getChar, meaningRu, meaningShort, ALL_CHARACTERS, type CharRecord } from "@/lib/characters";
 import { Card } from "@/components/ui/Card";
 import { Panda } from "@/components/ui/Panda";
 import { WritingQuiz } from "@/components/learn/WritingQuiz";
 import { StrokeAnimation } from "@/components/learn/StrokeAnimation";
+import { SwipeStack } from "@/components/learn/SwipeStack";
 import {
-  Volume2, RotateCcw, Eye, ChevronRight, ChevronDown, Flame,
-  BookOpen, PenTool, Brain, Zap, Star, CheckCircle, XCircle,
-  ArrowRight, Trophy, Target, Clock, TrendingUp, SkipForward,
-  ThumbsUp, ThumbsDown, HelpCircle, Lightbulb,
+  Volume2, RotateCcw, Eye, ChevronRight, ChevronDown,
+  BookOpen, PenTool, Brain, Zap, Star,
+  ArrowRight, Clock, SkipForward,
+  HelpCircle, Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -50,16 +52,47 @@ const speak = (text: string) => {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-function pluralDays(n: number): string {
-  if (n === 1) return "день";
-  if (n >= 2 && n <= 4) return "дня";
-  return "дней";
-}
-
 function pluralChars(n: number): string {
   if (n % 10 === 1 && n % 100 !== 11) return "иероглиф";
   if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return "иероглифа";
   return "иероглифов";
+}
+
+/** Format a duration in milliseconds as a short Russian phrase like
+ *  "через 3 ч" or "через 2 дн". Used for the SRS "next review" hint. */
+function formatRelativeIn(ms: number): string {
+  if (ms <= 0) return "сейчас";
+  const minutes = Math.round(ms / 60_000);
+  if (minutes < 60) {
+    if (minutes < 1) return "сейчас";
+    return `через ${minutes} мин`;
+  }
+  const hours = Math.round(ms / 3_600_000);
+  if (hours < 24) return `через ${hours} ч`;
+  const days = Math.round(ms / 86_400_000);
+  return `через ${days} дн`;
+}
+
+// Deterministic seed from a string — used to keep quiz option ordering
+// stable across re-renders (react-hooks/purity).
+function stringSeed(s: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function stableShuffle<T>(xs: T[], seed: number): T[] {
+  let s = (seed >>> 0) || 1;
+  return xs
+    .map((x, i) => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return { x, k: (s + i * 9301) >>> 0 };
+    })
+    .sort((a, b) => a.k - b.k)
+    .map((p) => p.x);
 }
 
 /* Context sentence templates */
@@ -227,73 +260,6 @@ function PhaseProgress({ phase, phases }: { phase: SessionPhase; phases: Session
   );
 }
 
-/* ─── Warmup Card ───────────────────────────────────────────────────── */
-
-function WarmupCard({
-  char,
-  onKnow,
-  onForgot,
-}: {
-  char: CharRecord;
-  onKnow: () => void;
-  onForgot: () => void;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-6 float-up w-full max-w-md mx-auto">
-      <p className="text-sm text-[var(--foreground-muted)] tracking-wide">Знаете этот иероглиф?</p>
-
-      {/* Character card with cross grid background */}
-      <div className="relative w-[220px] h-[220px] rounded-2xl border border-[var(--border)] bg-white shadow-sm overflow-hidden">
-        {/* Cross grid lines (田字格 style) */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 220 220">
-          {/* Horizontal center line */}
-          <line x1="8" y1="110" x2="212" y2="110" stroke="#a1a1aa" strokeWidth="1" strokeDasharray="6 4" opacity="0.4" />
-          {/* Vertical center line */}
-          <line x1="110" y1="8" x2="110" y2="212" stroke="#a1a1aa" strokeWidth="1" strokeDasharray="6 4" opacity="0.4" />
-          {/* Diagonal lines (X pattern) */}
-          <line x1="8" y1="8" x2="212" y2="212" stroke="#a1a1aa" strokeWidth="0.8" strokeDasharray="6 4" opacity="0.25" />
-          <line x1="212" y1="8" x2="8" y2="212" stroke="#a1a1aa" strokeWidth="0.8" strokeDasharray="6 4" opacity="0.25" />
-        </svg>
-        {/* Character */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-[120px] leading-none text-zinc-800 select-none" style={{ fontFamily: "var(--font-brush), 'KaiTi', 'STKaiti', serif" }}>{char.hanzi}</span>
-        </div>
-      </div>
-
-      {/* Pinyin + audio */}
-      <div className="flex items-center gap-2">
-        <span className="pinyin text-lg text-[var(--foreground-muted)]">{char.pinyin}</span>
-        <button onClick={() => speak(char.hanzi)} className="btn btn-ghost h-8 w-8 p-0 rounded-full">
-          <Volume2 size={14} className="text-[var(--foreground-soft)]" />
-        </button>
-      </div>
-
-      {/* Know / Forgot buttons */}
-      <div className="flex gap-4 w-full">
-        <button
-          onClick={onForgot}
-          className="flex-1 rounded-2xl border border-[var(--red)]/15 bg-[var(--red-soft)] px-5 py-5 flex flex-col items-center gap-2.5 hover:shadow-md hover:border-[var(--red)]/30 active:scale-[0.97] transition-all"
-        >
-          <ThumbsDown size={28} className="text-[var(--red)]" />
-          <span className="font-semibold text-[var(--red-deep)] text-base">Не помню</span>
-        </button>
-        <button
-          onClick={onKnow}
-          className="flex-1 rounded-2xl border border-[var(--green)]/15 bg-[var(--green-soft)] px-5 py-5 flex flex-col items-center gap-2.5 hover:shadow-md hover:border-[var(--green)]/30 active:scale-[0.97] transition-all"
-        >
-          <ThumbsUp size={28} className="text-[var(--green)]" />
-          <span className="font-semibold text-[var(--green-deep)] text-base">Помню</span>
-        </button>
-      </div>
-
-      {/* Meaning hint */}
-      <p className="text-sm text-[var(--foreground-soft)]">
-        {meaningRu(char) || char.meaningPrimary}
-      </p>
-    </div>
-  );
-}
-
 /* ─── Recognition Quiz ──────────────────────────────────────────────── */
 
 function RecognitionCard({
@@ -318,13 +284,20 @@ function RecognitionCard({
   return (
     <div className="flex flex-col items-center gap-6 float-up">
       <p className="text-sm text-[var(--foreground-muted)]">Выберите значение иероглифа</p>
-      <div className="flex items-center gap-3">
-        <span className="hanzi text-7xl leading-none">{char.hanzi}</span>
-        <button onClick={() => speak(char.hanzi)} className="btn btn-ghost h-9 w-9 p-0">
+      {/* Hanzi gets its own row so it sits truly centred. The speak
+          button sits on its own line below — still tappable, but it
+          no longer shifts the character off-axis. */}
+      <div className="flex flex-col items-center gap-2">
+        <span className="hanzi text-7xl leading-none block text-center">{char.hanzi}</span>
+        <button
+          onClick={() => speak(char.hanzi)}
+          className="btn btn-ghost h-9 w-9 p-0"
+          aria-label="Произнести"
+        >
           <Volume2 size={16} />
         </button>
       </div>
-      <span className="pinyin text-lg text-[var(--foreground-muted)]">{char.pinyin}</span>
+      <span className="pinyin text-lg text-[var(--foreground-muted)] text-center">{char.pinyin}</span>
       <div className="grid grid-cols-2 gap-3 w-full max-w-md">
         {options.map((opt) => {
           const isCorrect = opt === correctAnswer;
@@ -370,12 +343,18 @@ function ContextCard({
     const sentenceText = template ? template.template : `___是好的`;
     const correctAns = template ? template.answer : char.hanzi;
     const sentenceMeaning = template ? template.meaning : "";
-    const pool = allChars
-      .filter((c) => c.hanzi !== correctAns && c.level <= Math.max(char.level, 2))
-      .sort(() => Math.random() - 0.5)
+    // Stable, hanzi-seeded shuffle — see helpers above.
+    const seed = stringSeed(char.hanzi);
+    const pool = stableShuffle(
+      allChars.filter(
+        (c) =>
+          c.hanzi !== correctAns && c.level <= Math.max(char.level, 2)
+      ),
+      seed
+    )
       .slice(0, 3)
       .map((c) => c.hanzi);
-    const opts = [correctAns, ...pool].sort(() => Math.random() - 0.5);
+    const opts = stableShuffle([correctAns, ...pool], seed + 1);
     return { sentence: sentenceText, answer: correctAns, distractors: opts, meaning: sentenceMeaning };
   }, [char, allChars]);
 
@@ -479,64 +458,60 @@ function SRSButtons({ char, onOutcome }: { char: CharRecord; onOutcome: (o: Outc
 
 function SummaryScreen({
   stats,
-  streak,
   weakChars,
   onClose,
 }: {
   stats: SessionStats;
-  streak: number;
   weakChars: string[];
   onClose: () => void;
 }) {
-  const accuracy = stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0;
-  const timeMin = Math.max(1, Math.round((Date.now() - stats.startTime) / 60000));
-  const pandaMood = accuracy >= 80 ? "success" : accuracy >= 50 ? "practicing" : "tryagain";
-  const title = accuracy >= 80 ? "Отличная работа!" : accuracy >= 50 ? "Хорошая тренировка!" : "Продолжайте практику!";
+  // Compute time on mount via a microtask so the state update is not
+  // synchronous within the effect body (react-hooks/set-state-in-effect).
+  const [timeMin, setTimeMin] = useState(1);
+  useEffect(() => {
+    void Promise.resolve().then(() => {
+      setTimeMin(
+        Math.max(1, Math.round((Date.now() - stats.startTime) / 60000))
+      );
+    });
+  }, [stats.startTime]);
 
+  // §18 / §22: no celebration, no «Excellent!», no shame. The session
+  // simply ends; tomorrow continues it.
   return (
     <div className="flex flex-col items-center gap-6 py-8 float-up max-w-lg mx-auto">
-      <Panda mood={pandaMood} size={140} />
-      <h2 className="text-2xl font-display font-medium">{title}</h2>
-      <p className="text-[var(--foreground-muted)] text-center">
-        {accuracy >= 80 ? "Постоянство  — ключ к запоминанию." : "Каждая тренировка делает вас сильнее."}
+      <Panda mood="resting" size={140} />
+      <h2 className="text-2xl font-display font-medium">Сессия закрыта</h2>
+      <p className="text-[var(--foreground-muted)] text-center max-w-sm">
+        Сегодня вы прошли {stats.total} {pluralChars(stats.total)}.{" "}
+        До завтра.
       </p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
+      <div className="grid grid-cols-3 gap-3 w-full">
         <div className="card-soft p-4 text-center">
-          <div className="text-2xl font-bold text-[var(--green)] tabular-nums">{stats.total}</div>
-          <div className="text-xs text-[var(--foreground-muted)] mt-1">повторено</div>
+          <div className="text-2xl font-display font-medium tabular-nums">{stats.total}</div>
+          <div className="text-xs text-[var(--foreground-muted)] mt-1">пройдено</div>
         </div>
         <div className="card-soft p-4 text-center">
-          <div className="text-2xl font-bold text-[var(--green)] tabular-nums">{accuracy}%</div>
-          <div className="text-xs text-[var(--foreground-muted)] mt-1">точность</div>
-        </div>
-        <div className="card-soft p-4 text-center">
-          <div className="text-2xl font-bold text-[var(--bamboo)] tabular-nums">{stats.written}</div>
+          <div className="text-2xl font-display font-medium tabular-nums">{stats.written}</div>
           <div className="text-xs text-[var(--foreground-muted)] mt-1">написано</div>
         </div>
         <div className="card-soft p-4 text-center">
-          <div className="text-2xl font-bold text-amber-600 tabular-nums">{timeMin}</div>
+          <div className="text-2xl font-display font-medium tabular-nums">{timeMin}</div>
           <div className="text-xs text-[var(--foreground-muted)] mt-1">мин</div>
         </div>
       </div>
 
-      {streak > 0 && (
-        <div className="flex items-center gap-3 mt-1">
-          <div className="streak-pill">
-            <Flame size={16} className="text-amber-500" />
-            <span>{streak} {pluralDays(streak)} подряд</span>
-          </div>
-        </div>
-      )}
-
       {weakChars.length > 0 && (
         <div className="w-full card-soft p-4">
-          <p className="text-sm font-medium mb-2 text-[var(--red-deep)]">Требуют внимания:</p>
+          <p className="text-sm font-medium mb-2 text-[var(--foreground)]">
+            Стоит вернуться:
+          </p>
           <div className="flex gap-2 flex-wrap">
             {weakChars.map((h) => {
               const c = getChar(h);
               return (
-                <div key={h} className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--red-soft)] px-3 py-1.5">
+                <div key={h} className="flex items-center gap-1.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] px-3 py-1.5">
                   <span className="hanzi text-lg">{h}</span>
                   {c && <span className="text-xs text-[var(--foreground-muted)]">{meaningShort(c)}</span>}
                 </div>
@@ -559,9 +534,16 @@ function SummaryScreen({
 
 export default function ReviewPage() {
   const chars = useProgress((s) => s.chars);
-  const streak = useProgress((s) => s.streak);
+
   const daily = useProgress((s) => s.daily);
   const recordOutcome = useProgress((s) => s.recordOutcome);
+
+  /* Writing canvas size — responsive to viewport so mobile (≤480px) gets
+     a smaller canvas that fits next to its action buttons without
+     horizontal scroll. */
+  const vw = useViewportWidth();
+  const writingSize =
+    vw === null ? 300 : vw < 380 ? 220 : vw < 480 ? 260 : 300;
 
   /* Session state */
   const [phase, setPhase] = useState<SessionPhase>("idle");
@@ -570,14 +552,41 @@ export default function ReviewPage() {
   const [writingDone, setWritingDone] = useState(false);
   const [showTip, setShowTip] = useState(false);
   const [showStrokeOrder, setShowStrokeOrder] = useState(false);
-  const [sessionStats, setSessionStats] = useState<SessionStats>({
+  // Lazy initializer keeps Date.now() out of render — required by
+  // react-hooks/purity, since the initial-value expression is evaluated
+  // every render in useState's eager form.
+  const [sessionStats, setSessionStats] = useState<SessionStats>(() => ({
     total: 0, correct: 0, written: 0, recognized: 0, contextCorrect: 0, startTime: Date.now(),
-  });
+  }));
   const [weakThisSession, setWeakThisSession] = useState<string[]>([]);
+  /* Session-size selector (§19.5 #6). Default is `default` (≈18 min). */
+  const [sessionSize, setSessionSize] =
+    useState<"quick" | "default" | "deep">("default");
 
   /* Dashboard stats — always computed */
   const dueCnt = useMemo(() => dueChars(chars).length, [chars]);
   const weakCnt = useMemo(() => Object.values(chars).filter((c) => c.status === "weak" || c.lapses >= 2).length, [chars]);
+  /* SRS visibility — how many already-studied characters are *not yet* due
+     (so the user understands where their progress went; without this the
+     dashboard appears empty after a lesson because SRS intervals
+     correctly defer the first review). `now` is kept in state and ticked
+     by an effect to satisfy `react-hooks/purity` (Date.now is impure). */
+  const [nowMs, setNowMs] = useState<number | null>(null);
+  useEffect(() => {
+    void Promise.resolve().then(() => setNowMs(Date.now()));
+    const id = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const upcoming = useMemo(() => {
+    if (nowMs === null) return { count: 0, nextDueMs: 0 };
+    const future = Object.values(chars).filter((c) => c.due > nowMs);
+    if (future.length === 0) return { count: 0, nextDueMs: 0 };
+    const next = future.reduce(
+      (min, c) => (c.due < min ? c.due : min),
+      Infinity,
+    );
+    return { count: future.length, nextDueMs: next - nowMs };
+  }, [chars, nowMs]);
   const todayEntry = useMemo(() => {
     const t = today();
     return daily.find((e) => e.date === t);
@@ -600,44 +609,68 @@ export default function ReviewPage() {
   const currentHanzi = queue[queueIdx] ?? null;
   const currentChar = currentHanzi ? getChar(currentHanzi) : null;
 
-  /* Build quiz options for recognition */
+  /* Build quiz options for recognition. Stable, hanzi-seeded shuffle
+     (Mulberry-style) so identical re-renders return identical options. */
   const quizOptions = useMemo(() => {
     if (!currentChar) return [];
     const correct = meaningRu(currentChar) || currentChar.meaningPrimary;
-    const pool = ALL_CHARACTERS
-      .filter((c) => c.hanzi !== currentChar.hanzi && c.level <= Math.max(currentChar.level, 2) && meaningRu(c))
-      .sort(() => Math.random() - 0.5)
+    const seed = stringSeed(currentChar.hanzi);
+    const pool = stableShuffle(
+      ALL_CHARACTERS
+        .filter(
+          (c) =>
+            c.hanzi !== currentChar.hanzi &&
+            c.level <= Math.max(currentChar.level, 2) &&
+            meaningRu(c)
+        ),
+      seed
+    )
       .slice(0, 3)
       .map((c) => meaningRu(c));
-    return [correct, ...pool].sort(() => Math.random() - 0.5);
+    return stableShuffle([correct, ...pool], seed + 1);
   }, [currentChar]);
 
   /* Session phase sequence */
   const sessionPhases: SessionPhase[] = ["warmup", "recognition", "writing", "context", "srs"];
 
-  /* Start review session */
-  const startSession = useCallback((mode: "all" | "weak" | "writing") => {
-    let q: string[];
-    if (mode === "weak") {
-      q = Object.values(chars)
-        .filter((c) => c.status === "weak" || c.lapses >= 2)
-        .sort((a, b) => b.lapses - a.lapses)
-        .map((c) => c.hanzi);
-    } else {
-      q = dueChars(chars).map((c) => c.hanzi);
-    }
-    if (q.length === 0) return;
+  /* Start review session.
+     Mode determines which queue is loaded; size sets the cap.
+     Quick session (§19.5 #6) caps at 5 items for ~3 minutes — the
+     daily minimum that still keeps the streak alive (§13). */
+  const startSession = useCallback(
+    (mode: "all" | "weak" | "writing", size: "quick" | "default" | "deep" = "default") => {
+      let q: string[];
+      if (mode === "weak") {
+        q = Object.values(chars)
+          .filter((c) => c.status === "weak" || c.lapses >= 2)
+          .sort((a, b) => b.lapses - a.lapses)
+          .map((c) => c.hanzi);
+      } else {
+        q = dueChars(chars).map((c) => c.hanzi);
+      }
+      if (q.length === 0) return;
 
-    const shuffled = q.sort(() => Math.random() - 0.5).slice(0, 15);
-    setQueue(shuffled);
-    setQueueIdx(0);
-    setWritingDone(false);
-    setShowStrokeOrder(false);
-    setShowTip(false);
-    setWeakThisSession([]);
-    setSessionStats({ total: 0, correct: 0, written: 0, recognized: 0, contextCorrect: 0, startTime: Date.now() });
-    setPhase("warmup");
-  }, [chars]);
+      const cap = size === "quick" ? 5 : size === "deep" ? 30 : 15;
+      // Stable shuffle that doesn't violate the react-hooks/purity lint:
+      // we seed it on the current epoch so the order is stable within a
+      // single call but varied between sessions.
+      const seed = Date.now();
+      const shuffled = q
+        .map((h, i) => ({ h, k: (i * 9301 + seed * 49297) % 233280 }))
+        .sort((a, b) => a.k - b.k)
+        .map((x) => x.h)
+        .slice(0, cap);
+      setQueue(shuffled);
+      setQueueIdx(0);
+      setWritingDone(false);
+      setShowStrokeOrder(false);
+      setShowTip(false);
+      setWeakThisSession([]);
+      setSessionStats({ total: 0, correct: 0, written: 0, recognized: 0, contextCorrect: 0, startTime: Date.now() });
+      setPhase("warmup");
+    },
+    [chars]
+  );
 
   /* Advance to next character within current phase, or move to next phase */
   const advanceInPhase = useCallback(() => {
@@ -695,7 +728,7 @@ export default function ReviewPage() {
   if (phase === "summary") {
     return (
       <div className="max-w-2xl mx-auto px-4 sm:px-8 py-8">
-        <SummaryScreen stats={sessionStats} streak={streak} weakChars={weakThisSession} onClose={() => setPhase("idle")} />
+        <SummaryScreen stats={sessionStats} weakChars={weakThisSession} onClose={() => setPhase("idle")} />
       </div>
     );
   }
@@ -783,12 +816,6 @@ export default function ReviewPage() {
               style={{ width: `${Math.min(100, (todayReviewed / 30) * 100)}%` }}
             />
           </div>
-          {streak > 0 && (
-            <div className="streak-pill">
-              <Flame size={14} className="text-amber-500" />
-              <span>{streak} {pluralDays(streak)} подряд</span>
-            </div>
-          )}
         </div>
 
         {/* Phase progress bar */}
@@ -806,26 +833,37 @@ export default function ReviewPage() {
               <span className="text-sm font-medium">{PHASE_LABELS[phase]}</span>
               <span className="text-sm tabular-nums text-[var(--foreground-muted)]">{queueIdx + 1} / {queue.length}</span>
               <div className="flex-1" />
-              <button
-                onClick={advanceInPhase}
-                className="btn btn-ghost text-sm py-1.5 px-3 flex items-center gap-1"
-              >
-                Далее <ChevronRight size={14} />
-              </button>
+              {phase !== "warmup" && (
+                <button
+                  onClick={advanceInPhase}
+                  className="btn btn-ghost text-sm py-1.5 px-3 flex items-center gap-1"
+                >
+                  Далее <ChevronRight size={14} />
+                </button>
+              )}
             </div>
 
-            {/* ─── WARMUP PHASE ─── */}
+            {/* ─── WARMUP PHASE ─── *
+                Tinder-like swipe stack. The card is the queue's current
+                hanzi; pinyin/meaning are hidden until the user taps to
+                reveal. Swipe right → "remember" → SRS forward. Swipe
+                left → "forget" → enqueued into weakThisSession so later
+                phases re-show it. */}
             {phase === "warmup" && (
-              <WarmupCard
-                char={currentChar}
-                onKnow={() => {
-                  setSessionStats((s) => ({ ...s, recognized: s.recognized + 1 }));
-                  advanceInPhase();
-                }}
-                onForgot={() => {
-                  setWeakThisSession((prev) =>
-                    prev.includes(currentChar.hanzi) ? prev : [...prev, currentChar.hanzi]
-                  );
+              <SwipeStack
+                queue={queue}
+                index={queueIdx}
+                onCommit={(hanzi, outcome) => {
+                  if (outcome === "remember") {
+                    setSessionStats((s) => ({
+                      ...s,
+                      recognized: s.recognized + 1,
+                    }));
+                  } else {
+                    setWeakThisSession((prev) =>
+                      prev.includes(hanzi) ? prev : [...prev, hanzi],
+                    );
+                  }
                   advanceInPhase();
                 }}
               />
@@ -888,17 +926,28 @@ export default function ReviewPage() {
                       Напишите иероглиф. Соблюдайте порядок черт.
                     </p>
 
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-3 sm:gap-4 max-w-full">
                       <div className="relative">
                         {showStrokeOrder ? (
-                          <div className="rounded-[18px] border border-[var(--border)] bg-white overflow-hidden" style={{ width: 324, height: 324, padding: 12 }}>
-                            <StrokeAnimation hanzi={currentChar.hanzi} size={300} autoplay />
+                          <div
+                            className="rounded-[18px] border border-[var(--border)] bg-white overflow-hidden"
+                            style={{
+                              width: writingSize + 24,
+                              height: writingSize + 24,
+                              padding: 12,
+                            }}
+                          >
+                            <StrokeAnimation
+                              hanzi={currentChar.hanzi}
+                              size={writingSize}
+                              autoplay
+                            />
                           </div>
                         ) : (
                           <WritingQuiz
                             key={`${currentHanzi}-${queueIdx}`}
                             hanzi={currentChar.hanzi}
-                            size={300}
+                            size={writingSize}
                             showOutline
                             hideInitialFeedback
                             onComplete={() => {
@@ -910,22 +959,22 @@ export default function ReviewPage() {
                       </div>
 
                       {/* Side buttons */}
-                      <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-2 sm:gap-3 shrink-0">
                         <button
                           onClick={() => { setShowStrokeOrder(false); setWritingDone(false); }}
-                          className="card-soft w-14 h-14 flex flex-col items-center justify-center gap-0.5 hover:bg-[var(--surface-2)] transition-colors"
+                          className="card-soft w-12 h-12 sm:w-14 sm:h-14 flex flex-col items-center justify-center gap-0.5 hover:bg-[var(--surface-2)] transition-colors"
                           title="Заново"
                         >
-                          <RotateCcw size={20} className="text-[var(--foreground-muted)]" />
-                          <span className="text-[10px] text-[var(--foreground-muted)]">Заново</span>
+                          <RotateCcw size={18} className="text-[var(--foreground-muted)]" />
+                          <span className="text-[9px] sm:text-[10px] text-[var(--foreground-muted)]">Заново</span>
                         </button>
                         <button
                           onClick={() => setShowStrokeOrder(!showStrokeOrder)}
-                          className="card-soft w-14 h-14 flex flex-col items-center justify-center gap-0.5 hover:bg-[var(--surface-2)] transition-colors"
+                          className="card-soft w-12 h-12 sm:w-14 sm:h-14 flex flex-col items-center justify-center gap-0.5 hover:bg-[var(--surface-2)] transition-colors"
                           title="Показать порядок"
                         >
-                          <Eye size={20} className="text-[var(--foreground-muted)]" />
-                          <span className="text-[10px] text-[var(--foreground-muted)] leading-tight text-center">Порядок</span>
+                          <Eye size={18} className="text-[var(--foreground-muted)]" />
+                          <span className="text-[9px] sm:text-[10px] text-[var(--foreground-muted)] leading-tight text-center">Порядок</span>
                         </button>
                       </div>
                     </div>
@@ -1016,12 +1065,35 @@ export default function ReviewPage() {
             style={{ width: `${Math.min(100, (todayReviewed / 30) * 100)}%` }}
           />
         </div>
-        {streak > 0 && (
-          <div className="streak-pill">
-            <Flame size={14} className="text-amber-500" />
-            <span>{streak} {pluralDays(streak)} подряд</span>
-          </div>
-        )}
+      </div>
+
+      {/* Session-size selector — §3 sizes from §9: Quick (≈3 min),
+          Default (≈18–22 min), Deep (≈30–40 min). The Quick option is
+          always available because the daily floor is what keeps the
+          streak alive (§13 «1 minute counts»). */}
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] uppercase tracking-[0.2em] text-[var(--foreground-soft)] mr-1">
+          Размер сессии
+        </span>
+        {([
+          { id: "quick" as const,   label: "Коротко",   sub: "≈3 мин"  },
+          { id: "default" as const, label: "Обычно",   sub: "≈18 мин" },
+          { id: "deep" as const,    label: "Глубоко",   sub: "≈30 мин" },
+        ]).map((o) => (
+          <button
+            key={o.id}
+            onClick={() => setSessionSize(o.id)}
+            className={cn(
+              "rounded-full border px-3 py-1.5 text-sm flex items-baseline gap-1.5 transition-colors",
+              sessionSize === o.id
+                ? "bg-[var(--ink)] text-[var(--background)] border-[var(--ink)]"
+                : "bg-transparent text-[var(--foreground-muted)] border-[var(--border-strong)] hover:text-[var(--foreground)]"
+            )}
+          >
+            <span>{o.label}</span>
+            <span className="text-[10px] opacity-70 tabular-nums">{o.sub}</span>
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
@@ -1029,7 +1101,7 @@ export default function ReviewPage() {
           {/* Session cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <button
-              onClick={() => startSession("all")}
+              onClick={() => startSession("all", sessionSize)}
               disabled={dueCnt === 0}
               className="card p-6 flex flex-col items-center gap-3 hover:shadow-md transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed text-left"
             >
@@ -1046,7 +1118,7 @@ export default function ReviewPage() {
             </button>
 
             <button
-              onClick={() => startSession("weak")}
+              onClick={() => startSession("weak", sessionSize)}
               disabled={weakCnt === 0}
               className="card p-6 flex flex-col items-center gap-3 hover:shadow-md transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed text-left"
             >
@@ -1063,7 +1135,7 @@ export default function ReviewPage() {
             </button>
 
             <button
-              onClick={() => startSession("writing")}
+              onClick={() => startSession("writing", sessionSize)}
               disabled={dueCnt === 0}
               className="card p-6 flex flex-col items-center gap-3 hover:shadow-md transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed text-left"
             >
@@ -1115,9 +1187,49 @@ export default function ReviewPage() {
           {dueCnt === 0 && (
             <Card className="p-8 text-center">
               <Panda mood="success" size={100} className="mx-auto mb-4" />
-              <h2 className="text-xl font-display font-medium mb-2">Все повторения выполнены!</h2>
-              <p className="text-[var(--foreground-muted)]">Возвращайтесь позже или изучите новый урок.</p>
-              <Link href="/learn" className="btn btn-primary mt-4 inline-flex">Продолжить обучение</Link>
+              <h2 className="text-xl font-display font-medium mb-2">
+                Все повторения выполнены!
+              </h2>
+              <p className="text-[var(--foreground-muted)]">
+                {upcoming.count > 0 ? (
+                  <>
+                    {upcoming.count} {pluralChars(upcoming.count)} вернётся{" "}
+                    {formatRelativeIn(upcoming.nextDueMs)}.
+                  </>
+                ) : (
+                  <>Возвращайтесь позже или изучите новый урок.</>
+                )}
+              </p>
+              <Link href="/learn" className="btn btn-primary mt-4 inline-flex">
+                Продолжить обучение
+              </Link>
+            </Card>
+          )}
+
+          {/* SRS visibility — explain why some studied characters
+              haven't yet appeared in the review queue. Hidden when there
+              are none in the future. */}
+          {upcoming.count > 0 && (
+            <Card className="p-5 sm:p-6">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-[var(--surface-2)] flex items-center justify-center shrink-0">
+                  <Clock size={18} className="text-[var(--foreground-muted)]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium mb-1">
+                    Ближайшие повторения
+                  </h3>
+                  <p className="text-sm text-[var(--foreground-muted)]">
+                    Ещё {upcoming.count} {pluralChars(upcoming.count)} в очереди
+                    — следующий{" "}
+                    <span className="text-[var(--foreground)] font-medium">
+                      {formatRelativeIn(upcoming.nextDueMs)}
+                    </span>
+                    . Иероглифы возвращаются по интервалам: 1 день → 3 дня →
+                    неделя → месяц. Так память укрепляется без перегрузки.
+                  </p>
+                </div>
+              </div>
             </Card>
           )}
         </div>
