@@ -26,45 +26,39 @@ const ITEMS = [
 
 export function WhyItWorks() {
   return (
-    <section className="relative py-12 sm:py-16 overflow-hidden bg-[var(--surface-2)]">
+    <section className="relative py-16 sm:py-20 lg:py-24 overflow-hidden bg-[#152e20]">
       <div className="relative z-[2] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
-        <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-8 lg:gap-14 items-center">
-          {/* Left: heading + panda */}
-          <div className="flex flex-col items-center lg:items-start gap-4 lg:max-w-[260px]">
+        {/* Large typographic statement — full width, editorial */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-12 lg:gap-20 items-start">
+          <div>
+            <h2 className="text-4xl sm:text-5xl lg:text-[4rem] font-display font-medium tracking-[-0.03em] leading-[1.05] text-white">
+              Почему это
+              <br />
+              работает
+            </h2>
+            <p className="mt-5 text-[oklch(0.72_0.03_145)] text-base leading-relaxed max-w-md">
+              Метод Minzi основан на четырёх принципах когнитивной науки. Каждый этап обучения задействует отдельный канал памяти.
+            </p>
             <Image
               src="/panda/reading_for_web.png"
               alt=""
               width={200}
               height={200}
-              className="w-28 lg:w-36 drop-shadow-[0_4px_12px_rgba(0,0,0,0.10)]"
+              className="mt-8 w-32 lg:w-40 drop-shadow-[0_4px_16px_rgba(0,0,0,0.25)] hidden sm:block"
             />
-            <h2 className="text-3xl md:text-4xl lg:text-[2.75rem] font-display font-medium tracking-[-0.02em] leading-[1.1] text-center lg:text-left">
-              Почему это
-              <br />
-              <span className="text-[var(--green-deep)]">работает</span>
-            </h2>
           </div>
 
-          {/* Right: 2x2 grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {ITEMS.map(({ icon: Icon, title, body }) => (
-              <div
-                key={title}
-                className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 transition-colors duration-200 hover:bg-white"
-              >
-                <div className="flex items-center gap-3 mb-2.5">
-                  <Icon
-                    size={16}
-                    strokeWidth={1.6}
-                    className="text-[var(--green)]"
-                  />
-                  <span className="font-medium tracking-tight text-[15px]">
-                    {title}
-                  </span>
+          {/* Right: 4 items as a numbered list, not cards */}
+          <div className="space-y-6 pt-2">
+            {ITEMS.map(({ icon: Icon, title, body }, i) => (
+              <div key={title} className="flex gap-4 items-start">
+                <div className="h-9 w-9 shrink-0 rounded-full border border-[oklch(0.4_0.04_145)] flex items-center justify-center">
+                  <Icon size={16} strokeWidth={1.6} className="text-[oklch(0.75_0.1_150)]" />
                 </div>
-                <p className="text-[13px] text-[var(--foreground-muted)] leading-relaxed">
-                  {body}
-                </p>
+                <div>
+                  <div className="font-medium text-white text-base tracking-tight">{title}</div>
+                  <div className="text-sm text-[oklch(0.62_0.03_145)] mt-0.5 leading-relaxed">{body}</div>
+                </div>
               </div>
             ))}
           </div>
