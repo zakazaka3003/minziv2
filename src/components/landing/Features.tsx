@@ -5,6 +5,7 @@ const ITEMS = [
     icon: PenLine,
     title: "Пишите, а не просто смотрите",
     body: "Активное письмо задействует память сильнее, чем чтение.",
+    primary: true,
   },
   {
     icon: Brush,
@@ -24,14 +25,34 @@ const ITEMS = [
 ];
 
 export function Features() {
+  const primary = ITEMS[0];
+  const rest = ITEMS.slice(1);
+  const PrimaryIcon = primary.icon;
+
   return (
-    <section id="features" className="py-10 sm:py-14">
+    <section id="features" className="py-8 sm:py-10">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-[var(--border)] rounded-lg overflow-hidden border border-[var(--border)]">
-          {ITEMS.map(({ icon: Icon, title, body }) => (
+        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr_1fr] gap-3">
+          {/* Primary feature — spans full height */}
+          <div className="bg-[var(--green-soft)] border border-[var(--border)] rounded-lg p-6 flex flex-col justify-center transition-colors duration-150 hover:bg-[oklch(0.92_0.04_145)]">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-8 w-8 rounded-md bg-[var(--green)] flex items-center justify-center">
+                <PrimaryIcon size={16} strokeWidth={1.6} className="text-white" />
+              </div>
+              <h3 className="font-medium text-base tracking-tight">
+                {primary.title}
+              </h3>
+            </div>
+            <p className="text-sm text-[var(--foreground-muted)] leading-relaxed">
+              {primary.body}
+            </p>
+          </div>
+
+          {/* Secondary features */}
+          {rest.map(({ icon: Icon, title, body }) => (
             <div
               key={title}
-              className="bg-[var(--surface)] p-5 sm:p-6 flex items-start gap-4 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+              className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-5 flex items-start gap-4 transition-colors duration-150 hover:bg-[var(--surface-2)]"
             >
               <Icon
                 size={18}

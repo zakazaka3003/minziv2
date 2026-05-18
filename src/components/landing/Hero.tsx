@@ -14,7 +14,7 @@ export function Hero() {
         className="absolute -left-4 top-[12%] w-20 opacity-[0.07] hidden lg:block pointer-events-none select-none"
       />
 
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-14 sm:py-20 lg:py-24 grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-16 items-center">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-10 sm:py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-16 items-center">
         <div className="animate-fade-in-up">
           <div className="text-[11px] uppercase tracking-[0.25em] text-[var(--foreground-soft)] mb-4 font-medium">
             пишите &middot; понимайте &middot; запоминайте
@@ -49,11 +49,13 @@ export function Hero() {
           </div>
           <div className="mt-7 flex items-center gap-3">
             <div className="flex -space-x-2">
-              {[1, 2, 3, 4, 5].map((i) => (
+              {["А", "Д", "Е", "М", "С"].map((letter, i) => (
                 <div
                   key={i}
-                  className="h-8 w-8 rounded-full border-2 border-[var(--background)] bg-[var(--surface-3)]"
-                />
+                  className="h-8 w-8 rounded-full border-2 border-[var(--background)] bg-[var(--green-soft)] flex items-center justify-center text-xs font-medium text-[var(--green-deep)]"
+                >
+                  {letter}
+                </div>
               ))}
             </div>
             <div className="text-sm text-[var(--foreground-muted)]">

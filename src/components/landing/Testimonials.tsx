@@ -18,7 +18,7 @@ const REVIEWS = [
 
 export function Testimonials() {
   return (
-    <section id="testimonials" className="py-12 sm:py-16">
+    <section id="testimonials" className="py-8 sm:py-12">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
         <div className="text-[11px] uppercase tracking-[0.25em] text-[var(--foreground-soft)] mb-3 font-medium">
           Отзывы

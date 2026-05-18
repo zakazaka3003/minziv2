@@ -33,16 +33,13 @@ export function CTABand() {
             <div className="flex items-center gap-4 mt-1">
               <Link
                 href="/learn"
-                className="btn btn-primary h-11 px-6 text-sm relative overflow-hidden group"
+                className="btn btn-primary h-11 px-6 text-sm group"
               >
-                <span className="relative z-10 flex items-center gap-2">
-                  Начать бесплатно
-                  <ArrowRight
-                    size={14}
-                    className="transition-transform group-hover:translate-x-0.5"
-                  />
-                </span>
-                <span className="absolute inset-0 animate-shimmer pointer-events-none" />
+                Начать бесплатно
+                <ArrowRight
+                  size={14}
+                  className="transition-transform group-hover:translate-x-0.5"
+                />
               </Link>
               <span className="text-[oklch(0.55_0.02_145)] text-xs hidden sm:block">
                 12 000+ учеников
