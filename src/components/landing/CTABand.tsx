@@ -4,8 +4,8 @@ import { ArrowRight } from "lucide-react";
 
 export function CTABand() {
   return (
-    <section className="py-10 sm:py-14">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10">
+    <section className="py-6 sm:py-8">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
         <div className="relative overflow-hidden rounded-xl bg-[#152e20] min-h-[280px]">
           {/* Subtle radial light */}
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_25%_50%,oklch(0.35_0.04_145_/_0.25),transparent_55%)]" />

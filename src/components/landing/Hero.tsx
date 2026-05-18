@@ -14,7 +14,7 @@ export function Hero() {
         className="absolute -left-4 top-[12%] w-20 opacity-[0.07] hidden lg:block pointer-events-none select-none"
       />
 
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-14 sm:py-20 lg:py-24 grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-16 items-center">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-14 sm:py-20 lg:py-24 grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 lg:gap-16 items-center">
         <div className="animate-fade-in-up">
           <div className="text-[11px] uppercase tracking-[0.25em] text-[var(--foreground-soft)] mb-4 font-medium">
             пишите &middot; понимайте &middot; запоминайте

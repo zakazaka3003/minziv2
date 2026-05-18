@@ -29,14 +29,8 @@ export function WhyItWorks() {
     <section className="relative py-16 sm:py-20 overflow-hidden">
       <div className="absolute inset-0 bg-[#152e20]" />
 
-      {/* Top/bottom fade transitions into page background */}
-      <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-[var(--background)] to-transparent z-[1]" />
-      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[var(--background)] to-transparent z-[1]" />
 
-      {/* Subtle radial glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_50%,oklch(0.45_0.06_145_/_0.15),transparent_60%)]" />
-
-      <div className="relative z-[2] max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10">
+      <div className="relative z-[2] max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
         <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-10 lg:gap-16 items-center">
           {/* Left: heading + panda */}
           <div className="flex flex-col items-center lg:items-start gap-5 lg:max-w-[280px]">

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Volume2, Pause, ArrowRight } from "lucide-react";
+import { Volume2, Pause, Play, ArrowRight } from "lucide-react";
 
 const STEPS = [
   {
@@ -28,7 +28,7 @@ const STEPS = [
 export function HowItWorks() {
   return (
     <section id="how" className="py-14 sm:py-20">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-10 lg:gap-14 items-center">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-10 lg:gap-14 items-center">
         <div>
           <div className="text-[11px] uppercase tracking-[0.25em] text-[var(--foreground-soft)] mb-3 font-medium">
             Как проходит обучение
@@ -66,8 +66,8 @@ export function HowItWorks() {
           </div>
         </div>
 
-        <div className="relative grid grid-cols-3 gap-2.5">
-          <MockCard title="Значение">
+        <div className="relative grid grid-cols-3 gap-4">
+          <MockCard title="Значение" tilt="left">
             <div className="hanzi text-6xl text-center">你</div>
             <div className="pinyin text-center text-[var(--foreground-muted)] mt-2">
               nǐ
@@ -95,14 +95,14 @@ export function HowItWorks() {
                 <ArrowRight size={14} className="rotate-180" />
               </button>
               <button className="btn btn-primary h-9 w-9 p-0">
-                <Pause size={14} />
+                <Play size={14} />
               </button>
               <button className="btn btn-ghost h-8 w-8 p-0">
                 <ArrowRight size={14} />
               </button>
             </div>
           </MockCard>
-          <MockCard title="Практика">
+          <MockCard title="Практика" tilt="right">
             <div className="cali-grid border border-[var(--border)] rounded-md p-1">
               <div className="hanzi text-7xl text-center text-[var(--foreground-soft)]">
                 你
@@ -126,15 +126,18 @@ export function HowItWorks() {
 function MockCard({
   title,
   hi,
+  tilt,
   children,
 }: {
   title: string;
   hi?: boolean;
+  tilt?: "left" | "right";
   children: React.ReactNode;
 }) {
+  const tiltClass = tilt === "left" ? "-rotate-2" : tilt === "right" ? "rotate-2" : "";
   return (
     <div
-      className={`rounded-lg p-3 flex flex-col gap-1 bg-[var(--surface)] border border-[var(--border)] shadow-sm ${hi ? "shadow-md scale-[1.03] z-[1]" : ""}`}
+      className={`rounded-lg p-4 flex flex-col gap-1.5 bg-[var(--surface)] border border-[var(--border)] shadow-sm transition-transform ${hi ? "shadow-md scale-[1.03] z-[1]" : ""} ${tiltClass}`}
     >
       <div className="flex items-center justify-between text-[11px] text-[var(--foreground-muted)]">
         <span className="flex items-center gap-1">
