@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { StrokeAnimation } from "@/components/learn/StrokeAnimation";
 import { Card } from "@/components/ui/Card";
-import { Panda } from "@/components/ui/Panda";
 import { Settings, ArrowRight, Volume2 } from "lucide-react";
 
 // Stage names used on the lesson runner, per §8 of the Minzi spec.
@@ -71,10 +70,7 @@ export function HeroDemo() {
         </div>
       </Card>
 
-      {/* Decorative panda peeking from bottom right */}
-      <div className="absolute -bottom-4 -right-2 sm:-right-8 hidden md:block pointer-events-none">
-        <Panda mood="resting" size={120} />
-      </div>
+
     </div>
   );
 }

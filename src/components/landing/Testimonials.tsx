@@ -1,73 +1,71 @@
 const REVIEWS = [
   {
     name: "Анна",
-    sub: "6 месяцев",
-    body: "Раньше постоянно забывала иероглифы. С Minzi наконец начала их писать и лучше понимать. Результат ощущается!",
-    featured: true,
+    sub: "учит 6 месяцев",
+    body: "Раньше постоянно забывала иероглифы. С Minzi наконец начала их писать — и запоминать. Ощущение, что они действительно остаются в голове.",
   },
   {
     name: "Дмитрий",
-    sub: "1 год",
+    sub: "учит 1 год",
     body: "Очень нравится практика письма и подсказки по чертам. Чувствую, как растёт уверенность.",
   },
   {
     name: "Екатерина",
-    sub: "6 месяцев",
-    body: "Удобные повторения\u00a0— не надо думать, когда повторять, приложение само напоминает. Очень помогает!",
+    sub: "учит 6 месяцев",
+    body: "Не надо думать, когда повторять — приложение само напоминает. Очень помогает!",
   },
 ];
 
 export function Testimonials() {
-  const featured = REVIEWS[0];
-  const rest = REVIEWS.slice(1);
-
   return (
-    <section id="testimonials" className="py-10 sm:py-14">
+    <section id="testimonials" className="py-16 sm:py-20 lg:py-24 bg-[var(--surface-2)] border-y border-[var(--border)]">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
-        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-8 lg:gap-12 items-start">
-          {/* Left: editorial heading + featured large quote */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-12 lg:gap-20 items-start">
+          {/* Left: heading + featured quote */}
           <div>
             <div className="text-[11px] uppercase tracking-[0.25em] text-[var(--foreground-soft)] mb-3 font-medium">
               Отзывы
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-display font-medium tracking-[-0.02em] leading-[1.1] mb-8">
-              Что говорят ученики
+            <h2 className="text-[clamp(2rem,4vw,3rem)] font-display font-medium tracking-[-0.02em] leading-[1.1] mb-10">
+              Что говорят
+              <br />
+              ученики
             </h2>
-            <figure className="border-l-2 border-[var(--green)] pl-6 py-2">
-              <blockquote className="text-lg sm:text-xl font-display leading-relaxed text-[var(--foreground)]">
-                &ldquo;{featured.body}&rdquo;
+            <figure>
+              <blockquote className="text-xl sm:text-2xl font-display leading-[1.4] tracking-[-0.01em] border-l-2 border-[var(--green)] pl-6">
+                &ldquo;{REVIEWS[0].body}&rdquo;
               </blockquote>
-              <figcaption className="mt-4 flex items-center gap-3">
+              <figcaption className="mt-5 pl-6 flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-[var(--green-soft)] border border-[var(--border)] flex items-center justify-center text-sm font-medium text-[var(--green-deep)]">
-                  {featured.name[0]}
+                  {REVIEWS[0].name[0]}
                 </div>
                 <div>
-                  <div className="font-medium text-sm">{featured.name}</div>
-                  <div className="text-xs text-[var(--foreground-muted)]">{featured.sub}</div>
+                  <div className="font-medium text-sm">{REVIEWS[0].name}</div>
+                  <div className="text-xs text-[var(--foreground-muted)]">{REVIEWS[0].sub}</div>
                 </div>
               </figcaption>
             </figure>
           </div>
 
-          {/* Right: smaller quotes stacked */}
-          <div className="flex flex-col gap-4 lg:pt-16">
-            {rest.map((r) => (
+          {/* Right: remaining quotes, stacked */}
+          <div className="flex flex-col gap-4 lg:pt-20">
+            {REVIEWS.slice(1).map((r) => (
               <figure
                 key={r.name}
-                className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 transition-colors duration-150 hover:bg-[var(--surface-2)]"
+                className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 transition-colors duration-150 hover:bg-white"
               >
-                <div className="flex items-center gap-3 mb-3">
+                <blockquote className="text-base text-[var(--foreground)] leading-relaxed">
+                  &ldquo;{r.body}&rdquo;
+                </blockquote>
+                <figcaption className="mt-4 flex items-center gap-3">
                   <div className="h-9 w-9 rounded-full bg-[var(--green-soft)] border border-[var(--border)] flex items-center justify-center text-sm font-medium text-[var(--green-deep)]">
                     {r.name[0]}
                   </div>
-                  <figcaption>
+                  <div>
                     <div className="font-medium text-sm">{r.name}</div>
                     <div className="text-xs text-[var(--foreground-muted)]">{r.sub}</div>
-                  </figcaption>
-                </div>
-                <blockquote className="text-sm text-[var(--foreground)] leading-relaxed">
-                  &ldquo;{r.body}&rdquo;
-                </blockquote>
+                  </div>
+                </figcaption>
               </figure>
             ))}
           </div>
