@@ -1,76 +1,71 @@
-import { Brain, Eye, CalendarDays, Sprout } from "lucide-react";
+import Link from "next/link";
+import { Brain, RefreshCw, BookOpen, CheckCircle, ArrowRight } from "lucide-react";
 
-const STATS = [
-  { value: "3×", label: "быстрее запоминание через письмо" },
-  { value: "92%", label: "учеников помнят иероглифы через месяц" },
-  { value: "12 000+", label: "активных учеников" },
-];
-
-const PRINCIPLES = [
+const ITEMS = [
   {
     icon: Brain,
-    title: "Моторная память",
-    body: "Движение рукой создаёт устойчивые нейронные связи.",
+    title: "Активное воспроизведение",
+    body: "Письмо активирует больше областей мозга, чем пассивное чтение.",
   },
   {
-    icon: Eye,
-    title: "Визуальное распознавание",
-    body: "Вы запоминаете не только значение, но и форму иероглифа.",
-  },
-  {
-    icon: CalendarDays,
+    icon: RefreshCw,
     title: "Интервальное повторение",
-    body: "Алгоритм рассчитывает оптимальный момент для повторения.",
+    body: "Алгоритм подбирает идеальное время для повторения.",
   },
   {
-    icon: Sprout,
-    title: "Постепенное усложнение",
-    body: "От простых иероглифов к составным — без перегрузки.",
+    icon: BookOpen,
+    title: "Контекст и примеры",
+    body: "Вы запоминаете не просто символы, а понимание и применение.",
+  },
+  {
+    icon: CheckCircle,
+    title: "Прогресс наглядно",
+    body: "Чёткая статистика помогает видеть свои достижения.",
   },
 ];
 
 export function WhyItWorks() {
   return (
-    <section className="bg-[#152e20] text-white">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-16 sm:py-20 lg:py-24">
-        {/* Top: headline + stats row */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-10 lg:gap-20 items-start">
+    <section className="bg-[#152e20] text-white py-14 sm:py-18 lg:py-20">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
+        <div className="grid grid-cols-1 lg:grid-cols-[0.8fr_1fr] gap-10 lg:gap-16 items-start">
+          {/* Left — editorial */}
           <div>
-            <h2 className="text-[clamp(2rem,4vw,3.5rem)] font-display font-medium tracking-[-0.03em] leading-[1.05]">
-              Метод, подтверждённый
+            <div className="text-[11px] uppercase tracking-[0.25em] text-[oklch(0.55_0.03_145)] mb-3 font-medium">
+              Почему Minzi работает
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-display font-medium tracking-[-0.02em] leading-[1.1]">
+              Создано на науке
               <br />
-              когнитивной наукой
+              о памяти
             </h2>
-            <p className="mt-4 text-[oklch(0.72_0.03_145)] text-base leading-relaxed max-w-md">
-              Каждый этап обучения задействует отдельный канал памяти.
-              Письмо, зрение, контекст и&nbsp;повторение работают вместе.
+            <p className="mt-4 text-[oklch(0.68_0.03_145)] text-[15px] leading-relaxed max-w-sm">
+              Мы используем проверенные методы когнитивной науки, чтобы обучение было эффективным и&nbsp;комфортным.
             </p>
+            <Link
+              href="#how"
+              className="inline-flex items-center gap-1.5 mt-6 text-[oklch(0.75_0.1_150)] text-sm font-medium hover:text-white transition-colors group"
+            >
+              Узнать больше о методах
+              <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+            </Link>
           </div>
 
-          {/* Stats — right */}
-          <div className="grid grid-cols-3 gap-6">
-            {STATS.map((s) => (
-              <div key={s.value}>
-                <div className="text-3xl sm:text-4xl font-display font-medium tracking-tight text-[oklch(0.82_0.12_150)]">
-                  {s.value}
+          {/* Right — 4 cards in 2x2 grid */}
+          <div className="grid grid-cols-2 gap-4">
+            {ITEMS.map(({ icon: Icon, title, body }) => (
+              <div
+                key={title}
+                className="rounded-xl border border-[oklch(0.3_0.04_145)] bg-[oklch(0.18_0.04_145)] p-5 sm:p-6 transition-colors duration-200 hover:bg-[oklch(0.2_0.04_145)]"
+              >
+                <div className="h-11 w-11 rounded-full bg-[oklch(0.25_0.05_145)] border border-[oklch(0.35_0.04_145)] flex items-center justify-center mb-4">
+                  <Icon size={18} strokeWidth={1.5} className="text-[oklch(0.72_0.1_150)]" />
                 </div>
-                <div className="text-sm text-[oklch(0.58_0.03_145)] mt-1 leading-snug">
-                  {s.label}
-                </div>
+                <h3 className="font-medium text-[15px] tracking-tight mb-1.5">{title}</h3>
+                <p className="text-sm text-[oklch(0.58_0.03_145)] leading-relaxed">{body}</p>
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Bottom: 4 principles in a row */}
-        <div className="mt-14 sm:mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6">
-          {PRINCIPLES.map(({ icon: Icon, title, body }) => (
-            <div key={title}>
-              <Icon size={20} strokeWidth={1.5} className="text-[oklch(0.72_0.1_150)] mb-3" />
-              <div className="font-medium text-base tracking-tight mb-1.5">{title}</div>
-              <p className="text-sm text-[oklch(0.58_0.03_145)] leading-relaxed">{body}</p>
-            </div>
-          ))}
         </div>
       </div>
     </section>
