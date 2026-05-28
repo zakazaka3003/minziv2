@@ -1,67 +1,71 @@
-import Image from "next/image";
-import { Brain, Eye, CalendarDays, Sprout } from "lucide-react";
+import Link from "next/link";
+import { Brain, RefreshCw, BookOpen, CheckCircle, ArrowRight } from "lucide-react";
 
 const ITEMS = [
   {
     icon: Brain,
-    title: "Вы пишете",
-    body: "Движение рукой активирует моторную память.",
+    title: "Активное воспроизведение",
+    body: "Письмо активирует больше областей мозга, чем пассивное чтение.",
   },
   {
-    icon: Eye,
-    title: "Вы видите",
-    body: "Визуальное восприятие помогает запомнить образ.",
+    icon: RefreshCw,
+    title: "Интервальное повторение",
+    body: "Алгоритм подбирает идеальное время для повторения.",
   },
   {
-    icon: CalendarDays,
-    title: "Вы повторяете",
-    body: "Алгоритм повторений закрепляет в нужное время.",
+    icon: BookOpen,
+    title: "Контекст и примеры",
+    body: "Вы запоминаете не просто символы, а понимание и применение.",
   },
   {
-    icon: Sprout,
-    title: "Вы запоминаете",
-    body: "Информация переходит в долгосрочную память.",
+    icon: CheckCircle,
+    title: "Прогресс наглядно",
+    body: "Чёткая статистика помогает видеть свои достижения.",
   },
 ];
 
 export function WhyItWorks() {
   return (
-    <section className="relative py-14 sm:py-20 my-10 overflow-hidden">
-      {/* Dark band */}
-      <div className="absolute inset-0 bg-[#1a3f2a]">
-        <Image
-          src="/bg/bg_dark_bamboo.png"
-          alt=""
-          fill
-          className="object-cover opacity-50 mix-blend-screen"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#1a3f2a]/95 to-[#1a3f2a]/55" />
-      </div>
-
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-10 items-center">
-        <div className="flex items-center gap-6">
-          <Image
-            src="/panda/panda_studying.png"
-            alt=""
-            width={140}
-            height={140}
-            className="hidden md:block"
-          />
-          <h2 className="text-3xl sm:text-4xl font-display font-medium tracking-tight text-white">
-            Почему это <br />
-            <span className="text-[#a9d8b4]">работает</span>
-          </h2>
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-white/95">
-          {ITEMS.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="flex flex-col gap-2">
-              <div className="h-11 w-11 rounded-full border border-white/30 flex items-center justify-center text-white/90">
-                <Icon size={18} />
-              </div>
-              <div className="font-medium">{title}</div>
-              <div className="text-sm text-white/70 leading-relaxed">{body}</div>
+    <section className="bg-[#152e20] text-white py-14 sm:py-18 lg:py-20">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
+        <div className="grid grid-cols-1 lg:grid-cols-[0.8fr_1fr] gap-10 lg:gap-16 items-start">
+          {/* Left — editorial */}
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.25em] text-[oklch(0.55_0.03_145)] mb-3 font-medium">
+              Почему Minzi работает
             </div>
-          ))}
+            <h2 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-display font-medium tracking-[-0.02em] leading-[1.1]">
+              Создано на науке
+              <br />
+              о памяти
+            </h2>
+            <p className="mt-4 text-[oklch(0.68_0.03_145)] text-[15px] leading-relaxed max-w-sm">
+              Мы используем проверенные методы когнитивной науки, чтобы обучение было эффективным и&nbsp;комфортным.
+            </p>
+            <Link
+              href="#how"
+              className="inline-flex items-center gap-1.5 mt-6 text-[oklch(0.75_0.1_150)] text-sm font-medium hover:text-white transition-colors group"
+            >
+              Узнать больше о методах
+              <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </div>
+
+          {/* Right — 4 cards in 2x2 grid */}
+          <div className="grid grid-cols-2 gap-4">
+            {ITEMS.map(({ icon: Icon, title, body }) => (
+              <div
+                key={title}
+                className="rounded-xl border border-[oklch(0.3_0.04_145)] bg-[oklch(0.18_0.04_145)] p-5 sm:p-6 transition-colors duration-200 hover:bg-[oklch(0.2_0.04_145)]"
+              >
+                <div className="h-11 w-11 rounded-full bg-[oklch(0.25_0.05_145)] border border-[oklch(0.35_0.04_145)] flex items-center justify-center mb-4">
+                  <Icon size={18} strokeWidth={1.5} className="text-[oklch(0.72_0.1_150)]" />
+                </div>
+                <h3 className="font-medium text-[15px] tracking-tight mb-1.5">{title}</h3>
+                <p className="text-sm text-[oklch(0.58_0.03_145)] leading-relaxed">{body}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>

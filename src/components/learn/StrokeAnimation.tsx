@@ -153,9 +153,18 @@ export function StrokeAnimation({
       <div className="flex items-center gap-2">
         <button
           type="button"
+          onClick={replay}
+          disabled={!!error}
+          className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-[var(--border)] bg-white text-[var(--foreground-muted)] hover:text-[var(--foreground)] hover:shadow-sm transition-shadow"
+          aria-label="Заново"
+        >
+          <RotateCcw size={16} />
+        </button>
+        <button
+          type="button"
           onClick={togglePause}
           disabled={!!error}
-          className="btn btn-primary h-10 px-4"
+          className="inline-flex items-center justify-center w-10 h-10 rounded-full border border-[var(--border)] bg-white text-[var(--foreground-muted)] hover:text-[var(--foreground)] hover:shadow-sm transition-shadow"
           aria-label={
             !playing
               ? "Воспроизвести"
@@ -164,28 +173,7 @@ export function StrokeAnimation({
                 : "Пауза"
           }
         >
-          {!playing ? (
-            <>
-              <Play size={14} /> Смотреть
-            </>
-          ) : paused ? (
-            <>
-              <Play size={14} /> Продолжить
-            </>
-          ) : (
-            <>
-              <Pause size={14} /> Пауза
-            </>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={replay}
-          disabled={!!error}
-          className="btn btn-secondary h-10 px-4"
-          aria-label="Заново"
-        >
-          <RotateCcw size={14} /> Заново
+          {!playing || paused ? <Play size={16} /> : <Pause size={16} />}
         </button>
       </div>
     </div>

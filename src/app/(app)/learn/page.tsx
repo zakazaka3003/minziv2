@@ -2,29 +2,28 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { HSK1_LESSONS, type Lesson } from "@/lib/characters";
+import { getLessonsByLevel, type Lesson } from "@/lib/characters";
 import { useProgress } from "@/store/progress";
 import { useMounted } from "@/lib/useMounted";
 import { Panda } from "@/components/ui/Panda";
 import { ProgressBar } from "@/components/ui/Progress";
-import { ArrowRight, Lock, Check, ChevronRight, BookOpen } from "lucide-react";
+import { Lock, Check, ChevronRight, BookOpen, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const LEVELS = [1, 2, 3, 4, 5, 6, 7] as const;
-const CHARS_PER_LESSON = 5;
-const HSK1_TOTAL_CHARS = HSK1_LESSONS.reduce(
-  (s, l) => s + l.characters.length,
-  0
-);
-
 export default function LearnPage() {
   const [level, setLevel] = useState<number>(1);
   const completed = useProgress((s) => s.completedLessons);
   const mounted = useMounted();
 
-  const completedCount = mounted ? completed.length : 0;
-  const completedCharsCount = mounted ? completedCount * CHARS_PER_LESSON : 0;
-  const totalLessons = HSK1_LESSONS.length;
+  const levelLessons = getLessonsByLevel(level);
+  const totalCharsInLevel = levelLessons.reduce((s, l) => s + l.characters.length, 0);
+  const levelCompletedIds = mounted ? completed.filter((id) => id.startsWith(`hsk${level}-`)) : [];
+  const completedCount = levelCompletedIds.length;
+  const completedCharsCount = mounted
+    ? levelLessons.filter((l) => completed.includes(l.id)).reduce((s, l) => s + l.characters.length, 0)
+    : 0;
+  const totalLessons = levelLessons.length;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
@@ -35,8 +34,7 @@ export default function LearnPage() {
             HSK {level} · Уроки
           </h1>
           <p className="text-[var(--foreground-muted)] mt-2 max-w-md leading-snug">
-            Изучи {HSK1_TOTAL_CHARS} иероглифов и заложи фундамент китайского
-            языка
+            Изучите {totalCharsInLevel} иероглифов уровня HSK&nbsp;{level}
           </p>
         </div>
         <div className="hidden sm:block shrink-0 -mt-2 -mr-2">
@@ -51,16 +49,16 @@ export default function LearnPage() {
             Ваш прогресс
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl sm:text-4xl font-display font-medium text-[var(--green-deep)] tabular-nums">
+            <span className="text-3xl sm:text-4xl font-sans font-bold text-[var(--green-deep)] tabular-nums">
               {completedCharsCount}
             </span>
             <span className="text-lg text-[var(--foreground-muted)] tabular-nums">
-              / {HSK1_TOTAL_CHARS}
+              / {totalCharsInLevel}
             </span>
           </div>
           <ProgressBar
             value={completedCharsCount}
-            max={HSK1_TOTAL_CHARS}
+            max={totalCharsInLevel}
             className="mt-3"
           />
         </div>
@@ -69,7 +67,7 @@ export default function LearnPage() {
             Уроков пройдено
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl sm:text-4xl font-display font-medium text-[var(--green-deep)] tabular-nums">
+            <span className="text-3xl sm:text-4xl font-sans font-bold text-[var(--green-deep)] tabular-nums">
               {completedCount}
             </span>
             <span className="text-lg text-[var(--foreground-muted)] tabular-nums">
@@ -81,7 +79,7 @@ export default function LearnPage() {
           <div className="text-xs uppercase tracking-[0.18em] text-[var(--foreground-soft)] mb-2">
             Иероглифов изучено
           </div>
-          <div className="text-3xl sm:text-4xl font-display font-medium text-[var(--green-deep)] tabular-nums">
+          <div className="text-3xl sm:text-4xl font-sans font-bold text-[var(--green-deep)] tabular-nums">
             {completedCharsCount}
           </div>
         </div>
@@ -91,19 +89,15 @@ export default function LearnPage() {
       <div className="flex items-end gap-1 sm:gap-2 mb-6 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-[var(--border)]">
         {LEVELS.map((lvl) => {
           const active = lvl === level;
-          const disabled = lvl !== 1;
           return (
             <button
               key={lvl}
-              onClick={() => !disabled && setLevel(lvl)}
-              disabled={disabled}
+              onClick={() => setLevel(lvl)}
               className={cn(
                 "px-3 sm:px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors relative -mb-px",
                 active
                   ? "text-[var(--green-deep)]"
-                  : disabled
-                    ? "text-[var(--foreground-soft)] cursor-not-allowed"
-                    : "text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
+                  : "text-[var(--foreground-muted)] hover:text-[var(--foreground)]"
               )}
             >
               HSK {lvl}
@@ -115,46 +109,24 @@ export default function LearnPage() {
         })}
       </div>
 
-      {/* Lesson timeline */}
-      {level === 1 ? (
-        <ol className="relative" role="list">
-          {/* Vertical connector line */}
-          <span
-            aria-hidden
-            className="absolute left-[19px] top-6 bottom-6 w-px bg-[var(--border)]"
-          />
-          {HSK1_LESSONS.map((lesson, i) => {
-            const isDone = mounted && completed.includes(lesson.id);
-            const isCurrent =
-              mounted && !isDone && i === completedCount;
-            const isLocked = !isDone && !isCurrent;
-            return (
-              <li key={lesson.id} className="relative">
-                <LessonRow
-                  lesson={lesson}
-                  isDone={isDone}
-                  isCurrent={isCurrent}
-                  isLocked={isLocked}
-                />
-              </li>
-            );
-          })}
-        </ol>
-      ) : (
-        <div className="card p-8 text-center text-[var(--foreground-muted)]">
-          <BookOpen
-            size={28}
-            className="mx-auto mb-3 text-[var(--foreground-soft)]"
-          />
-          <div className="font-display text-xl text-[var(--foreground)] mb-1">
-            HSK {level} — скоро
-          </div>
-          <p className="text-sm">
-            Сейчас в Minzi открыт уровень HSK 1. Остальные уровни добавим в
-            следующих обновлениях.
-          </p>
-        </div>
-      )}
+      {/* Lesson list */}
+      <div className="divide-y divide-[var(--border)]" role="list">
+        {levelLessons.map((lesson, i) => {
+          const isDone = mounted && completed.includes(lesson.id);
+          const isCurrent =
+            mounted && !isDone && i === completedCount;
+          const isLocked = !isDone && !isCurrent;
+          return (
+            <LessonRow
+              key={lesson.id}
+              lesson={lesson}
+              isDone={isDone}
+              isCurrent={isCurrent}
+              isLocked={isLocked}
+            />
+          );
+        })}
+      </div>
 
       {/* Bottom CTA banner */}
       <div className="mt-10 rounded-[var(--radius-lg)] border border-[var(--green-soft)] bg-[var(--bamboo-soft)] p-5 sm:p-6 flex flex-col sm:flex-row items-center gap-5">
@@ -194,53 +166,45 @@ function LessonRow({
   isLocked: boolean;
 }) {
   const lessonNumber = lesson.index + 1;
+
   const node = isDone ? (
-    <span className="relative z-10 w-10 h-10 rounded-full bg-[var(--green)] text-white flex items-center justify-center shadow-sm">
+    <span className="w-10 h-10 rounded-full bg-[var(--green)] text-white flex items-center justify-center shadow-sm shrink-0">
       <Check size={18} strokeWidth={3} />
     </span>
   ) : isCurrent ? (
-    <span className="relative z-10 w-10 h-10 rounded-full bg-[var(--green-deep)] text-white flex items-center justify-center font-medium tabular-nums shadow-sm">
+    <span className="w-10 h-10 rounded-full bg-[var(--green-deep)] text-white flex items-center justify-center font-medium tabular-nums shadow-sm shrink-0">
       {lessonNumber}
     </span>
   ) : (
-    <span className="relative z-10 w-10 h-10 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground-soft)] flex items-center justify-center text-sm tabular-nums">
+    <span className="w-10 h-10 rounded-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground-soft)] flex items-center justify-center text-sm tabular-nums shrink-0">
       {lessonNumber}
     </span>
   );
 
-  const card = (
-    <div
-      className={cn(
-        "flex-1 min-w-0 rounded-2xl border bg-white px-4 sm:px-5 py-4 flex items-center gap-3 sm:gap-4 transition-all",
-        isCurrent
-          ? "border-[var(--green-soft)] bg-[var(--bamboo-soft)] shadow-sm"
-          : isDone
-            ? "border-[var(--border)] hover:shadow-sm"
-            : "border-[var(--border)] opacity-80"
-      )}
-    >
+  const content = (
+    <>
+      {node}
       <div className="flex-1 min-w-0">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--foreground-soft)] mb-1">
-          Урок {lessonNumber}
+        <div className="text-sm font-semibold italic text-[var(--foreground)] mb-0.5">
+          Урок {lessonNumber}{lesson.title ? ` · ${lesson.title}` : ""}
         </div>
-        <div className="hanzi text-lg sm:text-xl tracking-wider text-[var(--foreground)] leading-tight">
-          {lesson.characters.join(" ")}
+        {lesson.theme && (
+          <div className="text-[11px] text-[var(--foreground-soft)] mb-1">
+            {lesson.theme}
+          </div>
+        )}
+        <div className="hanzi text-lg sm:text-xl tracking-[0.25em] text-[var(--foreground)] leading-tight">
+          {lesson.characters.join("\u2003")}
         </div>
         <div className="text-xs text-[var(--foreground-muted)] mt-1">
           {lesson.characters.length} иероглифов
-          {lesson.title && (
-            <>
-              {" · "}
-              <span className="text-[var(--foreground)]">{lesson.title}</span>
-            </>
-          )}
         </div>
       </div>
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {isDone && <DoneBadge />}
         {isCurrent && (
-          <span className="btn btn-primary h-10 px-4 text-sm whitespace-nowrap">
-            Продолжить <ArrowRight size={14} />
+          <span className="btn btn-primary h-10 px-5 text-sm whitespace-nowrap">
+            Продолжить
           </span>
         )}
         {isLocked && (
@@ -251,46 +215,51 @@ function LessonRow({
             <Lock size={16} />
           </span>
         )}
-        <ChevronRight
-          size={18}
-          className={cn(
-            "shrink-0",
-            isLocked
-              ? "text-[var(--foreground-soft)]"
-              : "text-[var(--foreground-muted)]"
-          )}
-        />
+        {!isLocked && (
+          <ChevronRight
+            size={18}
+            className="shrink-0 text-[var(--foreground-muted)]"
+          />
+        )}
       </div>
-    </div>
+    </>
   );
 
-  const rowClass =
-    "flex items-stretch gap-4 sm:gap-5 py-2.5 sm:py-3 first:pt-0 last:pb-0";
-  const nodeWrap = (
-    <div className="w-10 shrink-0 flex items-start justify-center pt-3">
-      {node}
-    </div>
-  );
+  const rowBase =
+    "flex items-center gap-4 sm:gap-5 px-2 sm:px-3 py-4 sm:py-5 transition-colors";
 
-  if (isLocked) {
+  if (isCurrent) {
     return (
-      <div
-        className={cn(rowClass, "cursor-not-allowed")}
-        aria-disabled="true"
+      <Link
+        href={`/learn/${lesson.id}`}
+        className={cn(
+          rowBase,
+          "rounded-2xl bg-[var(--bamboo-soft)] border border-[var(--green-soft)] -mx-3 px-5 sm:-mx-4 sm:px-7 my-1 group focus:outline-none"
+        )}
       >
-        {nodeWrap}
-        {card}
-      </div>
+        {content}
+      </Link>
     );
   }
+
+  if (isDone) {
+    return (
+      <Link
+        href={`/learn/${lesson.id}`}
+        className={cn(rowBase, "group hover:bg-[var(--surface-2)] focus:outline-none")}
+      >
+        {content}
+      </Link>
+    );
+  }
+
   return (
-    <Link
-      href={`/learn/${lesson.id}`}
-      className={cn(rowClass, "group focus:outline-none")}
+    <div
+      className={cn(rowBase, "cursor-not-allowed opacity-75")}
+      aria-disabled="true"
     >
-      {nodeWrap}
-      {card}
-    </Link>
+      {content}
+    </div>
   );
 }
 

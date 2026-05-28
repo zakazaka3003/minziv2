@@ -35,7 +35,13 @@ export interface Lesson {
 }
 
 export const ALL_CHARACTERS: CharRecord[] = charactersJson as CharRecord[];
-export const HSK1_LESSONS: Lesson[] = lessonsJson as Lesson[];
+export const ALL_LESSONS: Lesson[] = lessonsJson as Lesson[];
+/** @deprecated Use ALL_LESSONS instead */
+export const HSK1_LESSONS: Lesson[] = ALL_LESSONS.filter((l) => l.level === 1);
+
+export function getLessonsByLevel(level: number): Lesson[] {
+  return ALL_LESSONS.filter((l) => l.level === level);
+}
 
 const byHanzi = new Map<string, CharRecord>();
 for (const c of ALL_CHARACTERS) byHanzi.set(c.hanzi, c);
@@ -45,7 +51,7 @@ export function getChar(hanzi: string): CharRecord | undefined {
 }
 
 export function getLesson(id: string): Lesson | undefined {
-  return HSK1_LESSONS.find((l) => l.id === id);
+  return ALL_LESSONS.find((l) => l.id === id);
 }
 
 /**

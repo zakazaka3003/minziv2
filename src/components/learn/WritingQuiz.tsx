@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { RotateCcw } from "lucide-react";
 
@@ -8,6 +8,8 @@ interface Props {
   hanzi: string;
   size?: number;
   className?: string;
+  showOutline?: boolean;
+  hideInitialFeedback?: boolean;
   onMistake?: () => void;
   onCorrectStroke?: (i: number, total: number) => void;
   onComplete?: (info: { totalMistakes: number; totalStrokes: number }) => void;
@@ -24,13 +26,22 @@ interface WriterAPI {
     showHintAfterMisses?: number;
   }) => void;
   cancelQuiz: () => void;
+  showCharacter: (opts?: { duration?: number }) => void;
   getCharacterData: () => Promise<{ strokes: unknown[] }>;
 }
 
+/**
+ * Writing canvas. Per §7 of the Minzi spec («the no-fail philosophy»):
+ * a wrong stroke fades silently — no red banner, no «Wrong!» text — and
+ * the canvas returns to its previous state. The only on-screen reward
+ * is the stroke itself transitioning to full ink.
+ */
 export function WritingQuiz({
   hanzi,
   size = 300,
   className,
+  showOutline = true,
+  hideInitialFeedback = false,
   onMistake,
   onCorrectStroke,
   onComplete,
@@ -39,9 +50,23 @@ export function WritingQuiz({
   const writerRef = useRef<WriterAPI | null>(null);
   const [strokeIdx, setStrokeIdx] = useState(0);
   const [totalStrokes, setTotalStrokes] = useState(0);
-  const [feedback, setFeedback] = useState<
-    null | { tone: "ok" | "warn" | "info"; text: string }
-  >({ tone: "info", text: "Пишите по образцу — система проверит порядок и направление черт." });
+  // We surface one quiet instruction line on the first render so it's clear
+  // what the user is being asked to do. After that, the canvas speaks for
+  // itself — successes ink in, failures fade silently.
+  const [instruction, setInstruction] = useState<string | null>(
+    hideInitialFeedback
+      ? null
+      : showOutline
+      ? "Пишите по образцу."
+      : "Напишите по памяти."
+  );
+
+  const onCompleteRef = useRef(onComplete);
+  const onMistakeRef = useRef(onMistake);
+  const onCorrectStrokeRef = useRef(onCorrectStroke);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+  useEffect(() => { onMistakeRef.current = onMistake; }, [onMistake]);
+  useEffect(() => { onCorrectStrokeRef.current = onCorrectStroke; }, [onCorrectStroke]);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,12 +83,20 @@ export function WritingQuiz({
           height: size,
           padding: 8,
           showCharacter: false,
-          showOutline: true,
-          strokeColor: "#2a2c28",
+          showOutline,
+          // sumi-ink for correct strokes; warm grey for the in-progress
+          // attempt. Mistakes draw in light grey and fade — never red.
+          // After 2 misses Hanzi Writer highlights the correct stroke as a
+          // hint; we render that hint in jade-green so it's unambiguously
+          // visible against the dark ink character.
+          strokeColor: "#1A1814",
           outlineColor: "#e6e3da",
-          drawingColor: "#c43a3a",
+          drawingColor: "#9ca09a",
           highlightColor: "#2e7d4f",
-          highlightOnComplete: true,
+          highlightOnComplete: false,
+          // Per §7 of the spec: stroke 2 misses → dotted guide; stroke
+          // 3 misses → ghost outline. Hanzi Writer surfaces both via the
+          // same hint mechanism.
           showHintAfterMisses: 2,
           charDataLoader(c, onCompleteCb) {
             fetch(
@@ -83,34 +116,30 @@ export function WritingQuiz({
         setTotalStrokes(data.strokes.length);
         writer.quiz({
           showHintAfterMisses: 2,
-          onMistake: (info) => {
+          onMistake: () => {
             if (cancelled) return;
-            setFeedback({
-              tone: "warn",
-              text:
-                info.mistakesOnStroke >= 2
-                  ? "Подсказка появится сейчас — посмотри на правильное направление."
-                  : "Не та черта — попробуй ещё раз. Обратите внимание на направление.",
-            });
-            onMistake?.();
+            // Silence is the feedback. Just forward the event upstream so
+            // the parent can count attempts.
+            onMistakeRef.current?.();
           },
           onCorrectStroke: (info) => {
             if (cancelled) return;
             const done = info.strokeNum + 1;
             setStrokeIdx(done);
-            setFeedback({ tone: "ok", text: "Верно. Следующая черта." });
-            onCorrectStroke?.(info.strokeNum, data.strokes.length);
+            // Clear the initial instruction once writing starts; the
+            // stroke-by-stroke ink darkening is the reward.
+            setInstruction(null);
+            onCorrectStrokeRef.current?.(info.strokeNum, data.strokes.length);
           },
           onComplete: (info) => {
             if (cancelled) return;
-            setFeedback({
-              tone: "ok",
-              text:
-                info.totalMistakes === 0
-                  ? "Отлично! Без ошибок."
-                  : `Готово! Ошибок: ${info.totalMistakes}.`,
-            });
-            onComplete?.({
+            setTimeout(() => {
+              writer.showCharacter();
+            }, 100);
+            // The closing copy belongs to the lesson stage (Settle), not
+            // this widget — so we say nothing here.
+            setInstruction(null);
+            onCompleteRef.current?.({
               totalMistakes: info.totalMistakes,
               totalStrokes: data.strokes.length,
             });
@@ -125,31 +154,34 @@ export function WritingQuiz({
       cancelled = true;
       writerRef.current?.cancelQuiz?.();
     };
-  }, [hanzi, size, onComplete, onCorrectStroke, onMistake]);
+  }, [hanzi, size, showOutline]);
 
-  const restart = () => {
-    // Recreate by toggling state through the effect: simplest = remount
+  const restart = useCallback(() => {
     if (containerRef.current) containerRef.current.innerHTML = "";
     setStrokeIdx(0);
-    setFeedback({ tone: "info", text: "Начинаем заново." });
-    // Re-run effect
+    setInstruction(showOutline ? "Пишите по образцу." : "Напишите по памяти.");
     const writer = writerRef.current as { quiz?: WriterAPI["quiz"] } | null;
     if (writer && writer.quiz) {
       writer.quiz({
-        onMistake: () => onMistake?.(),
+        onMistake: () => onMistakeRef.current?.(),
         onCorrectStroke: (info) => {
           setStrokeIdx(info.strokeNum + 1);
-          onCorrectStroke?.(info.strokeNum, totalStrokes);
+          setInstruction(null);
+          onCorrectStrokeRef.current?.(info.strokeNum, totalStrokes);
         },
         onComplete: (info) => {
-          onComplete?.({
+          setTimeout(() => {
+            writerRef.current?.showCharacter();
+          }, 100);
+          setInstruction(null);
+          onCompleteRef.current?.({
             totalMistakes: info.totalMistakes,
             totalStrokes,
           });
         },
       });
     }
-  };
+  }, [totalStrokes, showOutline]);
 
   return (
     <div className={cn("flex flex-col items-center gap-3", className)}>
@@ -182,19 +214,12 @@ export function WritingQuiz({
           <RotateCcw size={16} />
         </button>
       </div>
-      {feedback && (
+      {instruction && (
         <div
-          className={cn(
-            "rounded-[14px] border px-4 py-2.5 text-sm float-up max-w-[360px] text-center",
-            feedback.tone === "ok" &&
-              "border-[color:rgba(46,125,79,0.25)] bg-[var(--green-soft)] text-[var(--green-deep)]",
-            feedback.tone === "warn" &&
-              "border-[color:rgba(196,58,58,0.22)] bg-[var(--red-soft)] text-[var(--red-deep)]",
-            feedback.tone === "info" &&
-              "border-[var(--border)] bg-[var(--surface-2)] text-[var(--foreground-muted)]"
-          )}
+          className="px-4 py-2 text-sm text-center text-[var(--foreground-muted)] max-w-[360px]"
+          aria-live="polite"
         >
-          {feedback.text}
+          {instruction}
         </div>
       )}
     </div>
